@@ -24,6 +24,8 @@
   header{margin-bottom:1rem;}
   .eyebrow{ font-family:var(--mono); font-size:12px; letter-spacing:0.08em; color:var(--sunrise2); text-transform:uppercase; margin:0 0 8px; }
   h1{ font-weight:700; font-size:32px; margin:0 0 6px; line-height:1.15; }
+  .title-input-h1{ font-family:var(--sans); font-weight:700; font-size:32px; line-height:1.15; color:var(--text); background:transparent; border:0.5px solid transparent; border-radius:8px; padding:2px 6px; margin:0 0 6px -6px; width:100%; max-width:420px; }
+  .title-input-h1:hover, .title-input-h1:focus{ border-color:var(--border-strong); background:rgba(255,255,255,0.04); outline:none; }
   .sub{color:var(--text-dim); font-size:14px; margin:0;}
   .topbar{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;}
   .live{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-dim); background:var(--card); border:0.5px solid var(--border); border-radius:20px; padding:6px 12px 6px 10px; white-space:nowrap; }
@@ -33,7 +35,7 @@
   @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:0.35;}}
   @media(prefers-reduced-motion:reduce){.dot-live{animation:none;}}
 
-  .tabs{display:flex; gap:20px; margin:1.5rem 0 1.5rem; border-bottom:0.5px solid var(--border);}
+  .tabs{display:flex; gap:18px; margin:1.5rem 0 1.5rem; border-bottom:0.5px solid var(--border); flex-wrap:wrap;}
   .tab-btn{background:transparent; border:none; color:var(--text-dim); font-size:14px; padding:10px 2px; cursor:pointer; font-family:var(--sans); border-bottom:2px solid transparent; margin-bottom:-1px;}
   .tab-btn.active{color:var(--text); border-bottom-color:var(--sunrise2); font-weight:500;}
   .panel[hidden]{display:none;}
@@ -102,25 +104,28 @@
   .btn.primary:hover{background:var(--sunrise);}
   .btn.danger{color:#f4a3a3; border-color:rgba(244,163,163,0.35);}
 
-  .cost-row, .check-row{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:0.5px solid var(--border);}
-  .cost-row:last-child, .check-row:last-child{border-bottom:none;}
+  .cost-row, .check-row, .person-row{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:0.5px solid var(--border);}
+  .cost-row:last-child, .check-row:last-child, .person-row:last-child{border-bottom:none;}
   .cost-row .c-title{flex:1; min-width:0;}
   .cost-row .c-amount{width:100px; text-align:right;}
   .check-row .chk-title{flex:1; min-width:0;}
   .check-row.done .chk-title{color:var(--text-mute); text-decoration:line-through;}
   .check-row input[type="checkbox"]{width:18px; height:18px; accent-color:var(--sunrise2); flex-shrink:0;}
+  .person-row .pr-name{flex:1; min-width:0;}
+  .person-row .pr-type{width:110px;}
+  .badge-child{ font-size:11px; color:var(--sunrise2); background:rgba(244,184,96,0.12); padding:2px 8px; border-radius:10px; white-space:nowrap; }
   .totals-row{display:flex; justify-content:space-between; font-size:13.5px; padding:8px 0 0; color:var(--text-dim);}
   .totals-row.strong{font-weight:600; color:var(--text); font-size:15px; border-top:0.5px solid var(--border); margin-top:6px; padding-top:10px;}
-  .person-grid{display:flex; flex-direction:column; gap:0;}
 
   footer{margin-top:1rem; text-align:center; font-size:12px; color:var(--text-mute); display:flex; align-items:center; justify-content:center; gap:6px;}
   @media(max-width:480px){
-    h1{font-size:26px;}
+    h1, .title-input-h1{font-size:26px;}
     .time-col{width:56px; padding-right:12px;}
     .rail, .node{left:56px;}
     .next-hint{margin-left:0;}
     body{padding:2rem 0.9rem 3rem;}
     .cost-row .c-amount{width:80px;}
+    .person-row .pr-type{width:90px;}
   }
 </style>
 </head>
@@ -129,8 +134,8 @@
   <header>
     <div class="topbar">
       <div>
-        <p class="eyebrow">Rombongan · 7 orang</p>
-        <h1>Trip ke Bromo</h1>
+        <p class="eyebrow" id="eyebrow-text">Rombongan · 7 orang</p>
+        <input type="text" id="trip-title" class="title-input-h1" value="Trip ke Bromo" />
         <p class="sub">Jakarta → Magetan → Kediri → Batu → Bromo via Malang → Jakarta</p>
       </div>
       <div class="live"><span class="dot-live" id="dot-live"></span><span id="sync-label">Menyambungkan…</span><span id="sync-time"></span></div>
@@ -139,6 +144,7 @@
       <button class="tab-btn active" data-tab="itinerary">Itinerary</button>
       <button class="tab-btn" data-tab="costs">Biaya</button>
       <button class="tab-btn" data-tab="checklist">Checklist</button>
+      <button class="tab-btn" data-tab="participants">Peserta</button>
     </div>
   </header>
 
@@ -160,7 +166,7 @@
       <div id="shared-rows"></div>
       <button class="add-row-btn" id="add-shared-btn">+ Tambah biaya bersama</button>
       <div class="totals-row"><span>Total</span><span id="shared-total"></span></div>
-      <div class="totals-row"><span>Per orang (÷7)</span><span id="shared-split"></span></div>
+      <div class="totals-row" id="shared-split-row"><span>Per orang dewasa</span><span id="shared-split"></span></div>
     </div>
     <div id="person-cards"></div>
   </div>
@@ -170,6 +176,15 @@
       <div id="checklist-rows"></div>
       <button class="add-row-btn" id="add-check-btn">+ Tambah item checklist</button>
     </div>
+  </div>
+
+  <div id="panel-participants" class="panel" hidden>
+    <div class="card">
+      <div class="card-header">Daftar peserta</div>
+      <div id="participant-rows"></div>
+      <button class="add-row-btn" id="add-participant-btn">+ Tambah peserta</button>
+    </div>
+    <p class="sub" style="margin-top:-0.5rem;">Peserta "Anak" tidak ikut dihitung di pembagian biaya bersama.</p>
   </div>
 </div>
 
@@ -187,8 +202,6 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
-const PEOPLE = ["Icol","Cindy","Ega","Maya","Adit","Devita","Davi"];
 
 const ICON_PATHS = {
   travel: '<path d="M5 17h14M6 17a2 2 0 104 0M14 17a2 2 0 104 0M5 17V11l2-5h10l2 5v6"/>',
@@ -230,10 +243,7 @@ setInterval(updateSyncMeta, 15000);
 function setStatus(text, ok){
   document.getElementById("sync-label").textContent = text;
   document.getElementById("dot-live").classList.toggle('off', !ok);
-  if (ok && text.indexOf("Tersinkron") === 0){
-    lastSyncAt = new Date();
-    updateSyncMeta();
-  }
+  if (ok && text.indexOf("Tersinkron") === 0){ lastSyncAt = new Date(); updateSyncMeta(); }
 }
 
 // ---------- Tabs ----------
@@ -244,6 +254,99 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.add('active');
     document.getElementById('panel-' + btn.getAttribute('data-tab')).hidden = false;
   });
+});
+
+/* =====================================================
+   META (judul trip)
+===================================================== */
+const metaRef = db.ref("bromo-meta");
+let metaState = { title: "Trip ke Bromo" };
+let metaLastRaw = "";
+document.getElementById('trip-title').addEventListener('change', e => {
+  metaState.title = e.target.value.trim() || "Trip ke Bromo";
+  e.target.value = metaState.title;
+  pushMeta();
+});
+function pushMeta(){
+  metaLastRaw = JSON.stringify(metaState);
+  metaRef.set(metaState);
+}
+let metaFirstLoad = true;
+metaRef.on('value', snap => {
+  const data = snap.val();
+  if (!data || !data.title){ if (metaFirstLoad){ metaFirstLoad = false; pushMeta(); } return; }
+  const raw = JSON.stringify(data);
+  if (raw === metaLastRaw) return;
+  metaLastRaw = raw; metaState = data;
+  if (document.activeElement.id !== 'trip-title') document.getElementById('trip-title').value = metaState.title;
+});
+
+/* =====================================================
+   PARTICIPANTS
+===================================================== */
+const participantsRef = db.ref("bromo-participants");
+const DEFAULT_PARTICIPANTS = [
+  {id: uid(), name:"Icol", type:"dewasa"},
+  {id: uid(), name:"Cindy", type:"dewasa"},
+  {id: uid(), name:"Ega", type:"dewasa"},
+  {id: uid(), name:"Maya", type:"dewasa"},
+  {id: uid(), name:"Adit", type:"dewasa"},
+  {id: uid(), name:"Devita", type:"dewasa"},
+  {id: uid(), name:"Davi", type:"anak"}
+];
+let participantsState = { list: DEFAULT_PARTICIPANTS };
+let participantsLastRaw = "";
+
+function updateHeaderCount(){
+  document.getElementById('eyebrow-text').textContent = 'Rombongan · ' + participantsState.list.length + ' orang';
+}
+function renderParticipants(){
+  updateHeaderCount();
+  const root = document.getElementById('participant-rows');
+  root.innerHTML = participantsState.list.map(p =>
+    '<div class="person-row" data-id="' + p.id + '">' +
+      '<input type="text" class="pr-name" value="' + esc(p.name) + '" placeholder="Nama" />' +
+      '<select class="pr-type"><option value="dewasa"' + (p.type==='dewasa'?' selected':'') + '>Dewasa</option><option value="anak"' + (p.type==='anak'?' selected':'') + '>Anak</option></select>' +
+      '<button class="icon-btn pr-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
+    '</div>'
+  ).join('');
+  root.querySelectorAll('.pr-name').forEach(inp => inp.addEventListener('change', e => {
+    const id = e.target.closest('.person-row').getAttribute('data-id');
+    participantsState.list.find(p => p.id === id).name = e.target.value.trim() || "Tanpa nama";
+    pushParticipants();
+  }));
+  root.querySelectorAll('.pr-type').forEach(sel => sel.addEventListener('change', e => {
+    const id = e.target.closest('.person-row').getAttribute('data-id');
+    participantsState.list.find(p => p.id === id).type = e.target.value;
+    pushParticipants();
+  }));
+  root.querySelectorAll('.pr-del').forEach(btn => btn.addEventListener('click', e => {
+    const id = e.target.closest('.person-row').getAttribute('data-id');
+    participantsState.list = participantsState.list.filter(p => p.id !== id);
+    renderParticipants(); renderCosts(); renderChecklist(); pushParticipants();
+  }));
+}
+document.getElementById('add-participant-btn').addEventListener('click', () => {
+  participantsState.list.push({ id: uid(), name: "", type: "dewasa" });
+  renderParticipants(); pushParticipants();
+});
+function pushParticipants(){
+  participantsLastRaw = JSON.stringify(participantsState);
+  setStatus("Menyimpan…", true);
+  participantsRef.set(participantsState).then(() => setStatus("Tersinkron · tanpa login", true)).catch(() => setStatus("Gagal menyimpan", false));
+}
+let participantsFirstLoad = true;
+participantsRef.on('value', snap => {
+  const data = snap.val();
+  if (!data || !Array.isArray(data.list)){
+    if (participantsFirstLoad){ participantsFirstLoad = false; pushParticipants(); renderParticipants(); }
+    return;
+  }
+  const raw = JSON.stringify(data);
+  if (raw === participantsLastRaw) return;
+  participantsLastRaw = raw; participantsState = data;
+  renderParticipants(); renderCosts(); renderChecklist();
+  setStatus("Tersinkron · tanpa login", true);
 });
 
 /* =====================================================
@@ -292,7 +395,6 @@ function timeClass(date){
   if (h >= 17 && h < 19) return 'c-dusk';
   return 'c-night';
 }
-
 function computeTimes(){
   const items = itState.items;
   const times = [];
@@ -469,6 +571,7 @@ let costsState = { shared: [], personal: [] };
 let costsLastRaw = "";
 
 function renderCosts(){
+  const adults = participantsState.list.filter(p => p.type === 'dewasa');
   const sharedRoot = document.getElementById('shared-rows');
   sharedRoot.innerHTML = costsState.shared.map(row =>
     '<div class="cost-row" data-id="' + row.id + '">' +
@@ -478,18 +581,20 @@ function renderCosts(){
     '</div>'
   ).join('');
   const sharedTotal = costsState.shared.reduce((s,r) => s + (Number(r.amount)||0), 0);
-  const split = sharedTotal / PEOPLE.length;
+  const split = adults.length > 0 ? sharedTotal / adults.length : 0;
   document.getElementById('shared-total').textContent = rp(sharedTotal);
+  document.getElementById('shared-split-row').querySelector('span:first-child').textContent = 'Per orang dewasa (÷' + adults.length + ')';
   document.getElementById('shared-split').textContent = rp(split);
 
   const personRoot = document.getElementById('person-cards');
-  personRoot.innerHTML = PEOPLE.map(person => {
-    const items = costsState.personal.filter(r => r.person === person);
+  personRoot.innerHTML = participantsState.list.map(person => {
+    const items = costsState.personal.filter(r => r.person === person.id);
     const subtotal = items.reduce((s,r) => s + (Number(r.amount)||0), 0);
-    const grand = subtotal + split;
+    const isChild = person.type === 'anak';
+    const grand = subtotal + (isChild ? 0 : split);
     return '<div class="card">' +
-      '<div class="card-header">' + esc(person) + '</div>' +
-      '<div class="person-rows" data-person="' + esc(person) + '">' +
+      '<div class="card-header" style="display:flex; align-items:center; gap:8px;">' + esc(person.name) + (isChild ? '<span class="badge-child">Anak</span>' : '') + '</div>' +
+      '<div class="person-rows" data-person="' + person.id + '">' +
         items.map(row =>
           '<div class="cost-row" data-id="' + row.id + '">' +
             '<input type="text" class="p-title" value="' + esc(row.title) + '" placeholder="Nama biaya" />' +
@@ -498,10 +603,10 @@ function renderCosts(){
           '</div>'
         ).join('') +
       '</div>' +
-      '<button class="add-row-btn add-person-row" data-person="' + esc(person) + '">' + iconSvg('plus',13) + ' Tambah biaya ' + esc(person) + '</button>' +
+      '<button class="add-row-btn add-person-row" data-person="' + person.id + '">' + iconSvg('plus',13) + ' Tambah biaya ' + esc(person.name) + '</button>' +
       '<div class="totals-row"><span>Biaya pribadi</span><span>' + rp(subtotal) + '</span></div>' +
-      '<div class="totals-row"><span>Bagian bersama</span><span>' + rp(split) + '</span></div>' +
-      '<div class="totals-row strong"><span>Total ' + esc(person) + '</span><span>' + rp(grand) + '</span></div>' +
+      '<div class="totals-row"><span>Bagian bersama</span><span>' + (isChild ? '– (anak)' : rp(split)) + '</span></div>' +
+      '<div class="totals-row strong"><span>Total ' + esc(person.name) + '</span><span>' + rp(grand) + '</span></div>' +
     '</div>';
   }).join('');
 
@@ -510,37 +615,31 @@ function renderCosts(){
 function attachCostHandlers(){
   document.querySelectorAll('#shared-rows .c-title').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.cost-row').getAttribute('data-id');
-    const row = costsState.shared.find(r => r.id === id);
-    row.title = e.target.value.trim(); pushCosts();
+    costsState.shared.find(r => r.id === id).title = e.target.value.trim(); pushCosts();
   }));
   document.querySelectorAll('#shared-rows .c-amount').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.cost-row').getAttribute('data-id');
-    const row = costsState.shared.find(r => r.id === id);
-    row.amount = parseFloat(e.target.value) || 0; renderCosts(); pushCosts();
+    costsState.shared.find(r => r.id === id).amount = parseFloat(e.target.value) || 0; renderCosts(); pushCosts();
   }));
   document.querySelectorAll('#shared-rows .c-del').forEach(btn => btn.addEventListener('click', e => {
     const id = e.target.closest('.cost-row').getAttribute('data-id');
-    costsState.shared = costsState.shared.filter(r => r.id !== id);
-    renderCosts(); pushCosts();
+    costsState.shared = costsState.shared.filter(r => r.id !== id); renderCosts(); pushCosts();
   }));
   document.querySelectorAll('.p-title').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.cost-row').getAttribute('data-id');
-    const row = costsState.personal.find(r => r.id === id);
-    row.title = e.target.value.trim(); pushCosts();
+    costsState.personal.find(r => r.id === id).title = e.target.value.trim(); pushCosts();
   }));
   document.querySelectorAll('.p-amount').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.cost-row').getAttribute('data-id');
-    const row = costsState.personal.find(r => r.id === id);
-    row.amount = parseFloat(e.target.value) || 0; renderCosts(); pushCosts();
+    costsState.personal.find(r => r.id === id).amount = parseFloat(e.target.value) || 0; renderCosts(); pushCosts();
   }));
   document.querySelectorAll('.p-del').forEach(btn => btn.addEventListener('click', e => {
     const id = e.target.closest('.cost-row').getAttribute('data-id');
-    costsState.personal = costsState.personal.filter(r => r.id !== id);
-    renderCosts(); pushCosts();
+    costsState.personal = costsState.personal.filter(r => r.id !== id); renderCosts(); pushCosts();
   }));
   document.querySelectorAll('.add-person-row').forEach(btn => btn.addEventListener('click', e => {
-    const person = e.currentTarget.getAttribute('data-person');
-    costsState.personal.push({ id: uid(), person, title: "", amount: 0 });
+    const personId = e.currentTarget.getAttribute('data-person');
+    costsState.personal.push({ id: uid(), person: personId, title: "", amount: 0 });
     renderCosts(); pushCosts();
   }));
 }
@@ -581,7 +680,7 @@ function renderChecklist(){
       '<input type="text" class="chk-title" value="' + esc(row.title) + '" placeholder="Item persiapan" />' +
       '<select class="chk-assign">' +
         '<option value="Semua"' + (row.assignedTo==='Semua'?' selected':'') + '>Semua</option>' +
-        PEOPLE.map(p => '<option value="' + p + '"' + (row.assignedTo===p?' selected':'') + '>' + p + '</option>').join('') +
+        participantsState.list.map(p => '<option value="' + p.id + '"' + (row.assignedTo===p.id?' selected':'') + '>' + esc(p.name) + '</option>').join('') +
       '</select>' +
       '<button class="icon-btn chk-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
     '</div>'
@@ -629,6 +728,7 @@ checklistRef.on('value', snap => {
   setStatus("Tersinkron · tanpa login", true);
 });
 
+renderParticipants();
 renderItinerary();
 renderCosts();
 renderChecklist();
