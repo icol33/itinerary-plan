@@ -149,7 +149,7 @@
           <button class="icon-btn" id="edit-title-btn" aria-label="Edit judul & deskripsi"></button>
         </div>
         <p class="sub" id="trip-desc-display">Jakarta → Magetan → Kediri → Batu → Bromo via Malang → Jakarta</p>
-        <div id="title-edit-form" class="title-edit-form" hidden>
+        <div id="title-edit-form" class="title-edit-form" style="display:none;">
           <input type="text" id="title-input-field" placeholder="Judul trip" />
           <input type="text" id="desc-input-field" placeholder="Deskripsi rute" />
           <div class="title-edit-actions">
@@ -296,13 +296,13 @@ document.getElementById('edit-title-btn').addEventListener('click', () => {
   document.getElementById('desc-input-field').value = metaState.desc;
   document.getElementById('title-display-row').style.display = 'none';
   document.getElementById('trip-desc-display').style.display = 'none';
-  document.getElementById('title-edit-form').hidden = false;
+  document.getElementById('title-edit-form').style.display = 'flex';
 });
 function closeTitleEdit(){
   titleEditing = false;
   document.getElementById('title-display-row').style.display = '';
   document.getElementById('trip-desc-display').style.display = '';
-  document.getElementById('title-edit-form').hidden = true;
+  document.getElementById('title-edit-form').style.display = 'none';
 }
 document.getElementById('title-cancel-btn').addEventListener('click', closeTitleEdit);
 document.getElementById('title-save-btn').addEventListener('click', () => {
