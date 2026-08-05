@@ -26,6 +26,15 @@
   h1{ font-weight:700; font-size:32px; margin:0 0 6px; line-height:1.15; }
   .title-input-h1{ font-family:var(--sans); font-weight:700; font-size:32px; line-height:1.15; color:var(--text); background:transparent; border:0.5px solid transparent; border-radius:8px; padding:2px 6px; margin:0 0 6px -6px; width:100%; max-width:420px; }
   .title-input-h1:hover, .title-input-h1:focus{ border-color:var(--border-strong); background:rgba(255,255,255,0.04); outline:none; }
+  .title-row{display:flex; align-items:center; gap:8px;}
+  .title-row h1{margin:0;}
+  .title-edit-form{display:flex; flex-direction:column; gap:8px; margin-top:6px; max-width:420px;}
+  .title-edit-form input[type="text"]{font-size:14px; padding:8px 10px;}
+  .title-edit-actions{display:flex; gap:6px;}
+  .ok-btn{color:#7bd39a; border-color:rgba(123,211,154,0.4);}
+  .ok-btn:hover{background:rgba(123,211,154,0.12);}
+  .x-btn{color:#f4a3a3; border-color:rgba(244,163,163,0.4);}
+  .x-btn:hover{background:rgba(244,163,163,0.12);}
   .sub{color:var(--text-dim); font-size:14px; margin:0;}
   .topbar{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;}
   .live{ display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-dim); background:var(--card); border:0.5px solid var(--border); border-radius:20px; padding:6px 12px 6px 10px; white-space:nowrap; }
@@ -135,8 +144,19 @@
     <div class="topbar">
       <div>
         <p class="eyebrow" id="eyebrow-text">Rombongan · 7 orang</p>
-        <input type="text" id="trip-title" class="title-input-h1" value="Trip ke Bromo" />
-        <p class="sub">Jakarta → Magetan → Kediri → Batu → Bromo via Malang → Jakarta</p>
+        <div class="title-row" id="title-display-row">
+          <h1 id="trip-title-display">Trip ke Bromo</h1>
+          <button class="icon-btn" id="edit-title-btn" aria-label="Edit judul & deskripsi"></button>
+        </div>
+        <p class="sub" id="trip-desc-display">Jakarta → Magetan → Kediri → Batu → Bromo via Malang → Jakarta</p>
+        <div id="title-edit-form" class="title-edit-form" hidden>
+          <input type="text" id="title-input-field" placeholder="Judul trip" />
+          <input type="text" id="desc-input-field" placeholder="Deskripsi rute" />
+          <div class="title-edit-actions">
+            <button class="icon-btn ok-btn" id="title-save-btn" aria-label="Simpan"></button>
+            <button class="icon-btn x-btn" id="title-cancel-btn" aria-label="Batal"></button>
+          </div>
+        </div>
       </div>
       <div class="live"><span class="dot-live" id="dot-live"></span><span id="sync-label">Menyambungkan…</span><span id="sync-time"></span></div>
     </div>
@@ -207,7 +227,9 @@ const ICON_PATHS = {
   arrival: '<path d="M5 3v18"/><path d="M5 4h12l-2 4 2 4H5"/>',
   pencil: '<path d="M4 20h4L18 10l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
   trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
-  plus: '<path d="M12 5v14"/><path d="M5 12h14"/>'
+  plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  check: '<path d="M4 12l5 5L20 6"/>',
+  x: '<path d="M6 6l12 12"/><path d="M18 6L6 18"/>'
 };
 function iconSvg(name, size){
   size = size || 14;
@@ -217,6 +239,9 @@ function iconSvg(name, size){
   return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICON_PATHS[name] + '</svg>';
 }
 document.getElementById('grip-icon-slot').innerHTML = iconSvg('grip', 12);
+document.getElementById('edit-title-btn').innerHTML = iconSvg('pencil', 14);
+document.getElementById('title-save-btn').innerHTML = iconSvg('check', 14);
+document.getElementById('title-cancel-btn').innerHTML = iconSvg('x', 14);
 
 function uid(){ return "it-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,7); }
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -257,11 +282,34 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
    META (judul trip)
 ===================================================== */
 const metaRef = db.ref("bromo-meta");
-let metaState = { title: "Trip ke Bromo" };
+let metaState = { title: "Trip ke Bromo", desc: "Jakarta → Magetan → Kediri → Batu → Bromo via Malang → Jakarta" };
 let metaLastRaw = "";
-document.getElementById('trip-title').addEventListener('change', e => {
-  metaState.title = e.target.value.trim() || "Trip ke Bromo";
-  e.target.value = metaState.title;
+let titleEditing = false;
+
+function renderMeta(){
+  document.getElementById('trip-title-display').textContent = metaState.title;
+  document.getElementById('trip-desc-display').textContent = metaState.desc;
+}
+document.getElementById('edit-title-btn').addEventListener('click', () => {
+  titleEditing = true;
+  document.getElementById('title-input-field').value = metaState.title;
+  document.getElementById('desc-input-field').value = metaState.desc;
+  document.getElementById('title-display-row').style.display = 'none';
+  document.getElementById('trip-desc-display').style.display = 'none';
+  document.getElementById('title-edit-form').hidden = false;
+});
+function closeTitleEdit(){
+  titleEditing = false;
+  document.getElementById('title-display-row').style.display = '';
+  document.getElementById('trip-desc-display').style.display = '';
+  document.getElementById('title-edit-form').hidden = true;
+}
+document.getElementById('title-cancel-btn').addEventListener('click', closeTitleEdit);
+document.getElementById('title-save-btn').addEventListener('click', () => {
+  metaState.title = document.getElementById('title-input-field').value.trim() || "Trip ke Bromo";
+  metaState.desc = document.getElementById('desc-input-field').value.trim();
+  renderMeta();
+  closeTitleEdit();
   pushMeta();
 });
 function pushMeta(){
@@ -275,8 +323,9 @@ metaRef.on('value', snap => {
   const raw = JSON.stringify(data);
   if (raw === metaLastRaw) return;
   metaLastRaw = raw; metaState = data;
-  if (document.activeElement.id !== 'trip-title') document.getElementById('trip-title').value = metaState.title;
+  if (!titleEditing) renderMeta();
 });
+renderMeta();
 
 /* =====================================================
    PARTICIPANTS
