@@ -115,6 +115,11 @@
 
   .cost-row, .check-row, .person-row{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:0.5px solid var(--border);}
   .cost-row:last-child, .check-row:last-child, .person-row:last-child{border-bottom:none;}
+  .cost-item{padding:9px 0; border-bottom:0.5px solid var(--border);}
+  .cost-item:last-child{border-bottom:none;}
+  .cost-row-main{display:flex; align-items:center; gap:8px;}
+  .cost-row-meta{display:flex; align-items:center; gap:8px; margin-top:7px; flex-wrap:wrap;}
+  .cost-row-meta select{font-size:12px; padding:5px 8px;}
   .cost-row .c-title{flex:1; min-width:0;}
   .cost-row .c-amount{width:100px; text-align:right;}
   .check-row .chk-title{flex:1; min-width:0;}
@@ -188,7 +193,7 @@
       <div class="totals-row"><span>Total</span><span id="shared-total"></span></div>
       <div class="totals-row" id="shared-split-row"><span>Per orang dewasa</span><span id="shared-split"></span></div>
     </div>
-    <div id="person-cards"></div>
+    <div id="settlement-card"></div>
   </div>
 
   <div id="panel-checklist" class="panel" hidden>
@@ -384,13 +389,14 @@ function pushParticipants(){
 let participantsFirstLoad = true;
 participantsRef.on('value', snap => {
   const data = snap.val();
-  if (!data || !Array.isArray(data.list)){
+  if (!data){
     if (participantsFirstLoad){ participantsFirstLoad = false; pushParticipants(); renderParticipants(); }
     return;
   }
-  const raw = JSON.stringify(data);
+  const normalized = { list: Array.isArray(data.list) ? data.list : DEFAULT_PARTICIPANTS };
+  const raw = JSON.stringify(normalized);
   if (raw === participantsLastRaw) return;
-  participantsLastRaw = raw; participantsState = data;
+  participantsLastRaw = raw; participantsState = normalized;
   renderParticipants(); renderCosts(); renderChecklist();
   setStatus("Tersinkron · tanpa login", true);
 });
@@ -598,14 +604,15 @@ function pushItinerary(){
 let itFirstLoad = true;
 itineraryRef.on('value', snap => {
   const data = snap.val();
-  if (!data || !Array.isArray(data.items) || !data.start){
+  if (!data){
     if (itFirstLoad){ itFirstLoad = false; pushItinerary(); renderItinerary(); }
     return;
   }
-  const raw = JSON.stringify(data);
+  const normalized = { start: data.start || itState.start, items: Array.isArray(data.items) ? data.items : [] };
+  const raw = JSON.stringify(normalized);
   if (raw === itLastRaw) return;
   if (draggingId || editingIds.size > 0) return;
-  itLastRaw = raw; itState = data; renderItinerary();
+  itLastRaw = raw; itState = normalized; renderItinerary();
   setStatus("Tersinkron · tanpa login", true);
 }, () => setStatus("Tidak terhubung ke database", false));
 
@@ -613,17 +620,24 @@ itineraryRef.on('value', snap => {
    COSTS
 ===================================================== */
 const costsRef = db.ref("bromo-costs");
-let costsState = { shared: [], personal: [] };
+let costsState = { shared: [] };
 let costsLastRaw = "";
 
 function renderCosts(){
   const adults = participantsState.list.filter(p => p.type === 'dewasa');
   const sharedRoot = document.getElementById('shared-rows');
   sharedRoot.innerHTML = costsState.shared.map(row =>
-    '<div class="cost-row" data-id="' + row.id + '">' +
-      '<input type="text" class="c-title" value="' + esc(row.title) + '" placeholder="Nama biaya" />' +
-      '<input type="number" class="c-amount" value="' + (row.amount||0) + '" />' +
-      '<button class="icon-btn c-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
+    '<div class="cost-item" data-id="' + row.id + '">' +
+      '<div class="cost-row-main">' +
+        '<input type="text" class="c-title" value="' + esc(row.title) + '" placeholder="Nama biaya" />' +
+        '<input type="number" class="c-amount" value="' + (row.amount||0) + '" />' +
+        '<button class="icon-btn c-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
+      '</div>' +
+      '<div class="cost-row-meta">' +
+        '<select class="c-paidby"><option value="">— PIC —</option>' +
+          participantsState.list.map(p => '<option value="' + p.id + '"' + (row.paidBy===p.id?' selected':'') + '>' + esc(p.name) + '</option>').join('') +
+        '</select>' +
+      '</div>' +
     '</div>'
   ).join('');
   const sharedTotal = costsState.shared.reduce((s,r) => s + (Number(r.amount)||0), 0);
@@ -632,65 +646,73 @@ function renderCosts(){
   document.getElementById('shared-split-row').querySelector('span:first-child').textContent = 'Per orang dewasa (÷' + adults.length + ')';
   document.getElementById('shared-split').textContent = rp(split);
 
-  const personRoot = document.getElementById('person-cards');
-  personRoot.innerHTML = participantsState.list.map(person => {
-    const items = costsState.personal.filter(r => r.person === person.id);
-    const subtotal = items.reduce((s,r) => s + (Number(r.amount)||0), 0);
-    const isChild = person.type === 'anak';
-    const grand = subtotal + (isChild ? 0 : split);
-    return '<div class="card">' +
-      '<div class="card-header" style="display:flex; align-items:center; gap:8px;">' + esc(person.name) + (isChild ? '<span class="badge-child">Anak</span>' : '') + '</div>' +
-      '<div class="person-rows" data-person="' + person.id + '">' +
-        items.map(row =>
-          '<div class="cost-row" data-id="' + row.id + '">' +
-            '<input type="text" class="p-title" value="' + esc(row.title) + '" placeholder="Nama biaya" />' +
-            '<input type="number" class="p-amount" value="' + (row.amount||0) + '" />' +
-            '<button class="icon-btn p-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
-          '</div>'
-        ).join('') +
-      '</div>' +
-      '<button class="add-row-btn add-person-row" data-person="' + person.id + '">' + iconSvg('plus',13) + ' Tambah biaya ' + esc(person.name) + '</button>' +
-      '<div class="totals-row"><span>Biaya pribadi</span><span>' + rp(subtotal) + '</span></div>' +
-      '<div class="totals-row"><span>Bagian bersama</span><span>' + (isChild ? '– (anak)' : rp(split)) + '</span></div>' +
-      '<div class="totals-row strong"><span>Total ' + esc(person.name) + '</span><span>' + rp(grand) + '</span></div>' +
-    '</div>';
-  }).join('');
-
   attachCostHandlers();
+  renderSettlement();
 }
+
 function attachCostHandlers(){
-  document.querySelectorAll('#shared-rows .c-title').forEach(inp => inp.addEventListener('change', e => {
-    const id = e.target.closest('.cost-row').getAttribute('data-id');
+  document.querySelectorAll('.c-title').forEach(inp => inp.addEventListener('change', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
     costsState.shared.find(r => r.id === id).title = e.target.value.trim(); pushCosts();
   }));
-  document.querySelectorAll('#shared-rows .c-amount').forEach(inp => inp.addEventListener('change', e => {
-    const id = e.target.closest('.cost-row').getAttribute('data-id');
+  document.querySelectorAll('.c-amount').forEach(inp => inp.addEventListener('change', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
     costsState.shared.find(r => r.id === id).amount = parseFloat(e.target.value) || 0; renderCosts(); pushCosts();
   }));
-  document.querySelectorAll('#shared-rows .c-del').forEach(btn => btn.addEventListener('click', e => {
-    const id = e.target.closest('.cost-row').getAttribute('data-id');
+  document.querySelectorAll('.c-del').forEach(btn => btn.addEventListener('click', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
     costsState.shared = costsState.shared.filter(r => r.id !== id); renderCosts(); pushCosts();
   }));
-  document.querySelectorAll('.p-title').forEach(inp => inp.addEventListener('change', e => {
-    const id = e.target.closest('.cost-row').getAttribute('data-id');
-    costsState.personal.find(r => r.id === id).title = e.target.value.trim(); pushCosts();
-  }));
-  document.querySelectorAll('.p-amount').forEach(inp => inp.addEventListener('change', e => {
-    const id = e.target.closest('.cost-row').getAttribute('data-id');
-    costsState.personal.find(r => r.id === id).amount = parseFloat(e.target.value) || 0; renderCosts(); pushCosts();
-  }));
-  document.querySelectorAll('.p-del').forEach(btn => btn.addEventListener('click', e => {
-    const id = e.target.closest('.cost-row').getAttribute('data-id');
-    costsState.personal = costsState.personal.filter(r => r.id !== id); renderCosts(); pushCosts();
-  }));
-  document.querySelectorAll('.add-person-row').forEach(btn => btn.addEventListener('click', e => {
-    const personId = e.currentTarget.getAttribute('data-person');
-    costsState.personal.push({ id: uid(), person: personId, title: "", amount: 0 });
+  document.querySelectorAll('.c-paidby').forEach(sel => sel.addEventListener('change', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
+    costsState.shared.find(r => r.id === id).paidBy = e.target.value || null;
     renderCosts(); pushCosts();
   }));
 }
+
+function renderSettlement(){
+  const adults = participantsState.list.filter(p => p.type === 'dewasa');
+  const totalShared = costsState.shared.reduce((s,r) => s + (Number(r.amount)||0), 0);
+  const fairShare = adults.length > 0 ? totalShared / adults.length : 0;
+
+  const balances = participantsState.list.map(p => {
+    const paid = costsState.shared.filter(r => r.paidBy === p.id).reduce((s,r) => s + (Number(r.amount)||0), 0);
+    const owed = p.type === 'dewasa' ? fairShare : 0;
+    return { name: p.name, type: p.type, paid, owed, net: paid - owed };
+  });
+
+  let creditors = balances.filter(b => b.net > 500).map(b => ({ name: b.name, amt: b.net })).sort((a,b) => b.amt - a.amt);
+  let debtors = balances.filter(b => b.net < -500).map(b => ({ name: b.name, amt: -b.net })).sort((a,b) => b.amt - a.amt);
+  const transactions = [];
+  let ci = 0, di = 0;
+  while (ci < creditors.length && di < debtors.length){
+    const pay = Math.min(creditors[ci].amt, debtors[di].amt);
+    if (pay > 500) transactions.push({ from: debtors[di].name, to: creditors[ci].name, amount: pay });
+    creditors[ci].amt -= pay; debtors[di].amt -= pay;
+    if (creditors[ci].amt <= 500) ci++;
+    if (debtors[di].amt <= 500) di++;
+  }
+
+  const balanceRows = balances.length ? balances.map(b =>
+    '<div class="totals-row"><span>' + esc(b.name) + (b.type==='anak' ? ' <span class="badge-child">Anak</span>' : '') + '</span>' +
+    '<span style="color:' + (b.net > 500 ? '#7bd39a' : (b.net < -500 ? '#f4a3a3' : 'var(--text-dim)')) + ';">' +
+      (b.net > 500 ? '+' : '') + rp(b.net) +
+    '</span></div>'
+  ).join('') : '<p class="blurb">Belum ada peserta.</p>';
+
+  const txRows = transactions.length ? transactions.map(t =>
+    '<div class="totals-row"><span>' + esc(t.from) + ' → ' + esc(t.to) + '</span><span>' + rp(t.amount) + '</span></div>'
+  ).join('') : '<p class="blurb">Belum ada yang perlu dilunasi.</p>';
+
+  document.getElementById('settlement-card').innerHTML =
+    '<div class="card"><div class="card-header">Saldo per orang</div>' + balanceRows +
+      '<p class="blurb" style="margin-top:10px;">Hijau = sudah bayar lebih dari bagiannya (akan menerima). Merah = belum bayar bagiannya (perlu bayar).</p>' +
+    '</div>' +
+    '<div class="card"><div class="card-header">Cara pelunasan</div>' + txRows + '</div>';
+}
+
 document.getElementById('add-shared-btn').addEventListener('click', () => {
-  costsState.shared.push({ id: uid(), title: "", amount: 0 });
+  costsState.shared.push({ id: uid(), title: "", amount: 0, paidBy: null });
   renderCosts(); pushCosts();
 });
 function pushCosts(){
@@ -701,13 +723,14 @@ function pushCosts(){
 let costsFirstLoad = true;
 costsRef.on('value', snap => {
   const data = snap.val();
-  if (!data || !Array.isArray(data.shared) || !Array.isArray(data.personal)){
+  if (!data){
     if (costsFirstLoad){ costsFirstLoad = false; pushCosts(); renderCosts(); }
     return;
   }
-  const raw = JSON.stringify(data);
+  const normalized = { shared: Array.isArray(data.shared) ? data.shared : [] };
+  const raw = JSON.stringify(normalized);
   if (raw === costsLastRaw) return;
-  costsLastRaw = raw; costsState = data; renderCosts();
+  costsLastRaw = raw; costsState = normalized; renderCosts();
   setStatus("Tersinkron · tanpa login", true);
 });
 
@@ -777,13 +800,14 @@ function pushChecklist(){
 let checklistFirstLoad = true;
 checklistRef.on('value', snap => {
   const data = snap.val();
-  if (!data || !Array.isArray(data.items)){
+  if (!data){
     if (checklistFirstLoad){ checklistFirstLoad = false; pushChecklist(); renderChecklist(); }
     return;
   }
-  const raw = JSON.stringify(data);
+  const normalized = { items: Array.isArray(data.items) ? data.items : [] };
+  const raw = JSON.stringify(normalized);
   if (raw === checklistLastRaw) return;
-  checklistLastRaw = raw; checklistState = data; renderChecklist();
+  checklistLastRaw = raw; checklistState = normalized; renderChecklist();
   setStatus("Tersinkron · tanpa login", true);
 });
 
