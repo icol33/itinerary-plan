@@ -702,6 +702,30 @@ function renderSettlement(){
     });
   }
   const transactions = [];
+  // Netting: kalau dua orang sama-sama berutang satu sama lain (biasanya sesama PIC),
+  // sisakan cuma selisihnya jadi satu arah saja.
+  const involvedIds = new Set();
+  Object.keys(debtMap).forEach(o => { involvedIds.add(o); Object.keys(debtMap[o]).forEach(p => involvedIds.add(p)); });
+  const idList = Array.from(involvedIds);
+  for (let i = 0; i < idList.length; i++){
+    for (let j = i + 1; j < idList.length; j++){
+      const a = idList[i], b = idList[j];
+      const aOwesB = (debtMap[a] && debtMap[a][b]) || 0;
+      const bOwesA = (debtMap[b] && debtMap[b][a]) || 0;
+      if (aOwesB > 0 && bOwesA > 0){
+        if (aOwesB > bOwesA){
+          debtMap[a][b] = aOwesB - bOwesA;
+          delete debtMap[b][a];
+        } else if (bOwesA > aOwesB){
+          debtMap[b][a] = bOwesA - aOwesB;
+          delete debtMap[a][b];
+        } else {
+          delete debtMap[a][b];
+          delete debtMap[b][a];
+        }
+      }
+    }
+  }
   Object.keys(debtMap).forEach(owerId => {
     Object.keys(debtMap[owerId]).forEach(picId => {
       const amt = debtMap[owerId][picId];
