@@ -672,26 +672,43 @@ function attachCostHandlers(){
 
 function renderSettlement(){
   const adults = participantsState.list.filter(p => p.type === 'dewasa');
+  const numAdults = adults.length;
   const totalShared = costsState.shared.reduce((s,r) => s + (Number(r.amount)||0), 0);
-  const fairShare = adults.length > 0 ? totalShared / adults.length : 0;
+  const fairShare = numAdults > 0 ? totalShared / numAdults : 0;
+
+  const paidMap = {};
+  participantsState.list.forEach(p => { paidMap[p.id] = 0; });
+  costsState.shared.forEach(r => { if (r.paidBy && paidMap.hasOwnProperty(r.paidBy)) paidMap[r.paidBy] += Number(r.amount)||0; });
 
   const balances = participantsState.list.map(p => {
-    const paid = costsState.shared.filter(r => r.paidBy === p.id).reduce((s,r) => s + (Number(r.amount)||0), 0);
     const owed = p.type === 'dewasa' ? fairShare : 0;
-    return { name: p.name, type: p.type, paid, owed, net: paid - owed };
+    return { name: p.name, type: p.type, paid: paidMap[p.id]||0, owed, net: (paidMap[p.id]||0) - owed };
   });
 
-  let creditors = balances.filter(b => b.net > 500).map(b => ({ name: b.name, amt: b.net })).sort((a,b) => b.amt - a.amt);
-  let debtors = balances.filter(b => b.net < -500).map(b => ({ name: b.name, amt: -b.net })).sort((a,b) => b.amt - a.amt);
-  const transactions = [];
-  let ci = 0, di = 0;
-  while (ci < creditors.length && di < debtors.length){
-    const pay = Math.min(creditors[ci].amt, debtors[di].amt);
-    if (pay > 500) transactions.push({ from: debtors[di].name, to: creditors[ci].name, amount: pay });
-    creditors[ci].amt -= pay; debtors[di].amt -= pay;
-    if (creditors[ci].amt <= 500) ci++;
-    if (debtors[di].amt <= 500) di++;
+  // Hitung utang per item: tiap item displit rata ke semua orang dewasa,
+  // lalu tiap orang (selain PIC item itu) berutang porsinya ke PIC tersebut.
+  const nameById = {};
+  participantsState.list.forEach(p => { nameById[p.id] = p.name; });
+  const debtMap = {}; // ownerId -> { picId: amount }
+  if (numAdults > 0){
+    costsState.shared.forEach(item => {
+      if (!item.paidBy) return;
+      const share = (Number(item.amount)||0) / numAdults;
+      adults.forEach(a => {
+        if (a.id === item.paidBy) return;
+        debtMap[a.id] = debtMap[a.id] || {};
+        debtMap[a.id][item.paidBy] = (debtMap[a.id][item.paidBy] || 0) + share;
+      });
+    });
   }
+  const transactions = [];
+  Object.keys(debtMap).forEach(owerId => {
+    Object.keys(debtMap[owerId]).forEach(picId => {
+      const amt = debtMap[owerId][picId];
+      if (amt > 500) transactions.push({ from: nameById[owerId] || "?", to: nameById[picId] || "?", amount: amt });
+    });
+  });
+  transactions.sort((a,b) => a.from.localeCompare(b.from) || b.amount - a.amount);
 
   const balanceRows = balances.length ? balances.map(b =>
     '<div class="totals-row"><span>' + esc(b.name) + (b.type==='anak' ? ' <span class="badge-child">Anak</span>' : '') + '</span>' +
