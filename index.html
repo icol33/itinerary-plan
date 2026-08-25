@@ -127,9 +127,51 @@
   .check-row input[type="checkbox"]{width:18px; height:18px; accent-color:var(--sunrise2); flex-shrink:0;}
   .person-row .pr-name{flex:1; min-width:0;}
   .person-row .pr-type{width:110px;}
+  .person-row{flex-wrap:wrap;}
+  .person-row .pr-payer{min-width:110px;}
   .badge-child{ font-size:11px; color:var(--sunrise2); background:rgba(244,184,96,0.12); padding:2px 8px; border-radius:10px; white-space:nowrap; }
+
+  .cat-group{margin-bottom:4px; border-bottom:0.5px solid var(--border);}
+  .cat-group:last-of-type{border-bottom:none;}
+  .cat-group summary{cursor:pointer; font-weight:600; font-size:13.5px; padding:9px 0; list-style:none; display:flex; justify-content:space-between; align-items:center; color:var(--text-dim);}
+  .cat-group summary::-webkit-details-marker{display:none;}
+  .cat-group summary .chev{transition:transform .15s; color:var(--text-mute); flex-shrink:0; margin-left:8px;}
+  .cat-group[open] summary .chev{transform:rotate(90deg);}
+  .cat-group summary .cat-total{font-family:var(--mono); font-size:12px; color:var(--text-mute); margin-left:auto; margin-right:8px;}
+  .cat-group-body{padding-bottom:6px;}
+
+  .split-picker{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .pill-check{display:flex; align-items:center; gap:4px; font-size:12px; background:rgba(255,255,255,0.05); border:0.5px solid var(--border); border-radius:14px; padding:4px 9px;}
+  .pill-check input{width:14px; height:14px; accent-color:var(--sunrise2); margin:0;}
+  .custom-list{display:flex; flex-direction:column; gap:6px; margin-top:8px;}
+  .custom-row{display:flex; align-items:center; gap:8px;}
+  .custom-row .c-custom-amt{width:90px;}
+
+  .loan-row{display:flex; align-items:center; gap:6px; padding:8px 0; border-bottom:0.5px solid var(--border); flex-wrap:wrap;}
+  .loan-row:last-child{border-bottom:none;}
+  .loan-row select{flex:1; min-width:88px;}
+  .loan-row .l-amount{width:90px;}
+  .loan-row .l-note{flex:2; min-width:110px; font-size:12.5px;}
+  .loan-arrow{color:var(--text-mute); flex-shrink:0;}
   .totals-row{display:flex; justify-content:space-between; font-size:13.5px; padding:8px 0 0; color:var(--text-dim);}
   .totals-row.strong{font-weight:600; color:var(--text); font-size:15px; border-top:0.5px solid var(--border); margin-top:6px; padding-top:10px;}
+
+  /* Landing page */
+  .back-link{display:inline-flex; align-items:center; gap:6px; color:var(--text-dim); font-size:13px; text-decoration:none; margin-bottom:1.25rem;}
+  .back-link:hover{color:var(--text);}
+  .project-card{ background:var(--card); border:0.5px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px; display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--text); }
+  .project-card:hover{background:var(--card-hover); border-color:var(--border-strong);}
+  .project-card .pc-body{flex:1; min-width:0;}
+  .project-card .pc-name{font-weight:600; font-size:16px; margin:0 0 4px;}
+  .project-card .pc-tabs{display:flex; gap:6px; flex-wrap:wrap;}
+  .project-card .pc-tabs span{font-size:11px; color:var(--text-mute); background:rgba(255,255,255,0.05); border:0.5px solid var(--border); border-radius:8px; padding:2px 7px;}
+  .project-card .pc-arrow{color:var(--text-mute); flex-shrink:0;}
+  .new-project-card{ border:1.5px dashed var(--border-strong); border-radius:14px; padding:16px; margin-bottom:12px; }
+  .new-project-form{display:flex; flex-direction:column; gap:10px; margin-top:10px;}
+  .new-project-form input[type="text"]{font-size:14px; padding:9px 12px;}
+  .tab-picker{display:flex; flex-wrap:wrap; gap:8px;}
+  .landing-title{font-size:26px; font-weight:700; margin:0 0 6px;}
+  .landing-sub{color:var(--text-dim); font-size:14px; margin:0 0 1.75rem;}
 
   footer{margin-top:1rem; text-align:center; font-size:12px; color:var(--text-mute); display:flex; align-items:center; justify-content:center; gap:6px;}
   @media(max-width:480px){
@@ -144,7 +186,35 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+
+<div class="wrap" id="landing-page" style="display:none;">
+  <p class="landing-title">Kegiatan kita</p>
+  <p class="landing-sub">Pilih kegiatan yang mau dilihat, atau buat yang baru.</p>
+  <div id="project-cards"></div>
+  <div class="new-project-card">
+    <button class="add-row-btn" id="show-new-project-btn" style="border-style:solid;">+ Buat kegiatan baru</button>
+    <div class="new-project-form" id="new-project-form" style="display:none;">
+      <input type="text" id="new-project-name" placeholder="Nama kegiatan (misal: Buka Puasa Bareng)" />
+      <div>
+        <p class="sub" style="margin-bottom:8px;">Bagian apa aja yang dipakai?</p>
+        <div class="tab-picker">
+          <label class="pill-check"><input type="checkbox" class="np-tab" value="itinerary" checked /> Itinerary</label>
+          <label class="pill-check"><input type="checkbox" class="np-tab" value="costs" checked /> Biaya</label>
+          <label class="pill-check"><input type="checkbox" class="np-tab" value="checklist" checked /> Checklist</label>
+          <label class="pill-check"><input type="checkbox" class="np-tab" value="participants" checked /> Peserta</label>
+        </div>
+      </div>
+      <div class="title-edit-actions">
+        <button class="btn primary" id="create-project-btn">Buat & buka</button>
+        <button class="btn" id="cancel-new-project-btn">Batal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" id="detail-view" style="display:none;">
+<a href="./" class="back-link">← Semua kegiatan</a>
+<div class="wrap" style="max-width:none; margin:0; padding:0;">
   <header>
     <div class="topbar">
       <div>
@@ -191,7 +261,11 @@
       <div id="shared-rows"></div>
       <button class="add-row-btn" id="add-shared-btn">+ Tambah biaya bersama</button>
       <div class="totals-row"><span>Total</span><span id="shared-total"></span></div>
-      <div class="totals-row" id="shared-split-row"><span>Per orang dewasa</span><span id="shared-split"></span></div>
+    </div>
+    <div class="card">
+      <div class="card-header">Pinjaman antar peserta</div>
+      <div id="loan-rows"></div>
+      <button class="add-row-btn" id="add-loan-btn">+ Tambah pinjaman</button>
     </div>
     <div id="settlement-card"></div>
   </div>
@@ -206,8 +280,9 @@
       <div id="participant-rows"></div>
       <button class="add-row-btn" id="add-participant-btn">+ Tambah peserta</button>
     </div>
-    <p class="sub" style="margin-top:-0.5rem;">Peserta "Anak" tidak ikut dihitung di pembagian biaya bersama.</p>
+    <p class="sub" style="margin-top:-0.5rem;">Peserta "Anak" tidak ikut dihitung di pembagian biaya bersama. "Diwakilkan ke" artinya tagihan orang ini nanti dilunasi oleh orang yang dipilih (misal pasangan/orang tua).</p>
   </div>
+</div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -234,7 +309,8 @@ const ICON_PATHS = {
   trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
   plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
   check: '<path d="M4 12l5 5L20 6"/>',
-  x: '<path d="M6 6l12 12"/><path d="M18 6L6 18"/>'
+  x: '<path d="M6 6l12 12"/><path d="M18 6L6 18"/>',
+  arrow: '<path d="M9 6l6 6-6 6"/>'
 };
 function iconSvg(name, size){
   size = size || 14;
@@ -283,10 +359,36 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
+// ---------- Routing / Project selection ----------
+const urlParams = new URLSearchParams(window.location.search);
+const currentProjectId = urlParams.get('project');
+const ALL_TAB_KEYS = ['itinerary','costs','checklist','participants'];
+
+function pathFor(key){
+  if (currentProjectId === 'bromo'){
+    const legacy = { itinerary:'bromo-itinerary', costs:'bromo-costs', checklist:'bromo-checklist', participants:'bromo-participants', meta:'bromo-meta', loans:'bromo-loans' };
+    return legacy[key];
+  }
+  return 'projects/' + currentProjectId + '/' + key;
+}
+
+function applyActiveTabs(tabs){
+  const active = (tabs && tabs.length) ? tabs : ALL_TAB_KEYS;
+  let firstVisibleBtn = null;
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    const key = btn.getAttribute('data-tab');
+    const show = active.includes(key);
+    btn.style.display = show ? '' : 'none';
+    if (show && !firstVisibleBtn) firstVisibleBtn = btn;
+  });
+  const activeBtn = document.querySelector('.tab-btn.active');
+  if ((!activeBtn || activeBtn.style.display === 'none') && firstVisibleBtn) firstVisibleBtn.click();
+}
+
 /* =====================================================
    META (judul trip)
 ===================================================== */
-const metaRef = db.ref("bromo-meta");
+let metaRef;
 let metaState = { title: "Trip ke Bromo", desc: "Jakarta → Magetan → Kediri → Batu → Bromo via Malang → Jakarta" };
 let metaLastRaw = "";
 let titleEditing = false;
@@ -322,30 +424,33 @@ function pushMeta(){
   metaRef.set(metaState);
 }
 let metaFirstLoad = true;
-metaRef.on('value', snap => {
-  const data = snap.val();
-  if (!data || !data.title){ if (metaFirstLoad){ metaFirstLoad = false; pushMeta(); } return; }
-  const raw = JSON.stringify(data);
-  if (raw === metaLastRaw) return;
-  metaLastRaw = raw; metaState = data;
-  if (!titleEditing) renderMeta();
-});
-renderMeta();
+function initMeta(){
+  metaRef = db.ref(pathFor('meta'));
+  metaRef.on('value', snap => {
+    const data = snap.val();
+    if (!data || !data.title){ if (metaFirstLoad){ metaFirstLoad = false; pushMeta(); } return; }
+    const raw = JSON.stringify(data);
+    if (raw === metaLastRaw) return;
+    metaLastRaw = raw; metaState = data;
+    if (!titleEditing) renderMeta();
+  });
+  renderMeta();
+}
 
 /* =====================================================
    PARTICIPANTS
 ===================================================== */
-const participantsRef = db.ref("bromo-participants");
+let participantsRef;
 const DEFAULT_PARTICIPANTS = [
-  {id: uid(), name:"Icol", type:"dewasa"},
-  {id: uid(), name:"Cindy", type:"dewasa"},
-  {id: uid(), name:"Ega", type:"dewasa"},
-  {id: uid(), name:"Maya", type:"dewasa"},
-  {id: uid(), name:"Adit", type:"dewasa"},
-  {id: uid(), name:"Devita", type:"dewasa"},
-  {id: uid(), name:"Davi", type:"anak"}
+  {id: uid(), name:"Icol", type:"dewasa", payerId:null},
+  {id: uid(), name:"Cindy", type:"dewasa", payerId:null},
+  {id: uid(), name:"Ega", type:"dewasa", payerId:null},
+  {id: uid(), name:"Maya", type:"dewasa", payerId:null},
+  {id: uid(), name:"Adit", type:"dewasa", payerId:null},
+  {id: uid(), name:"Devita", type:"dewasa", payerId:null},
+  {id: uid(), name:"Davi", type:"anak", payerId:null}
 ];
-let participantsState = { list: DEFAULT_PARTICIPANTS };
+let participantsState = { list: (currentProjectId === 'bromo') ? DEFAULT_PARTICIPANTS : [] };
 let participantsLastRaw = "";
 
 function updateHeaderCount(){
@@ -358,27 +463,36 @@ function renderParticipants(){
     '<div class="person-row" data-id="' + p.id + '">' +
       '<input type="text" class="pr-name" value="' + esc(p.name) + '" placeholder="Nama" />' +
       '<select class="pr-type"><option value="dewasa"' + (p.type==='dewasa'?' selected':'') + '>Dewasa</option><option value="anak"' + (p.type==='anak'?' selected':'') + '>Anak</option></select>' +
+      '<select class="pr-payer"><option value="">Diri sendiri</option>' +
+        participantsState.list.filter(o => o.id !== p.id).map(o => '<option value="' + o.id + '"' + (p.payerId===o.id?' selected':'') + '>' + esc(o.name) + '</option>').join('') +
+      '</select>' +
       '<button class="icon-btn pr-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
     '</div>'
   ).join('');
   root.querySelectorAll('.pr-name').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.person-row').getAttribute('data-id');
     participantsState.list.find(p => p.id === id).name = e.target.value.trim() || "Tanpa nama";
-    pushParticipants();
+    renderParticipants(); pushParticipants();
   }));
   root.querySelectorAll('.pr-type').forEach(sel => sel.addEventListener('change', e => {
     const id = e.target.closest('.person-row').getAttribute('data-id');
     participantsState.list.find(p => p.id === id).type = e.target.value;
     pushParticipants();
   }));
+  root.querySelectorAll('.pr-payer').forEach(sel => sel.addEventListener('change', e => {
+    const id = e.target.closest('.person-row').getAttribute('data-id');
+    participantsState.list.find(p => p.id === id).payerId = e.target.value || null;
+    pushParticipants();
+  }));
   root.querySelectorAll('.pr-del').forEach(btn => btn.addEventListener('click', e => {
     const id = e.target.closest('.person-row').getAttribute('data-id');
     participantsState.list = participantsState.list.filter(p => p.id !== id);
+    participantsState.list.forEach(p => { if (p.payerId === id) p.payerId = null; });
     renderParticipants(); renderCosts(); renderChecklist(); pushParticipants();
   }));
 }
 document.getElementById('add-participant-btn').addEventListener('click', () => {
-  participantsState.list.push({ id: uid(), name: "", type: "dewasa" });
+  participantsState.list.push({ id: uid(), name: "", type: "dewasa", payerId: null });
   renderParticipants(); pushParticipants();
 });
 function pushParticipants(){
@@ -387,24 +501,27 @@ function pushParticipants(){
   participantsRef.set(participantsState).then(() => setStatus("Tersinkron · tanpa login", true)).catch(() => setStatus("Gagal menyimpan", false));
 }
 let participantsFirstLoad = true;
-participantsRef.on('value', snap => {
-  const data = snap.val();
-  if (!data){
-    if (participantsFirstLoad){ participantsFirstLoad = false; pushParticipants(); renderParticipants(); }
-    return;
-  }
-  const normalized = { list: Array.isArray(data.list) ? data.list : DEFAULT_PARTICIPANTS };
-  const raw = JSON.stringify(normalized);
-  if (raw === participantsLastRaw) return;
-  participantsLastRaw = raw; participantsState = normalized;
-  renderParticipants(); renderCosts(); renderChecklist();
-  setStatus("Tersinkron · tanpa login", true);
-});
+function initParticipants(){
+  participantsRef = db.ref(pathFor('participants'));
+  participantsRef.on('value', snap => {
+    const data = snap.val();
+    if (!data){
+      if (participantsFirstLoad){ participantsFirstLoad = false; pushParticipants(); renderParticipants(); }
+      return;
+    }
+    const normalized = { list: Array.isArray(data.list) ? data.list : [] };
+    const raw = JSON.stringify(normalized);
+    if (raw === participantsLastRaw) return;
+    participantsLastRaw = raw; participantsState = normalized;
+    renderParticipants(); renderCosts(); renderChecklist();
+    setStatus("Tersinkron · tanpa login", true);
+  });
+}
 
 /* =====================================================
    ITINERARY
 ===================================================== */
-const itineraryRef = db.ref("bromo-itinerary");
+let itineraryRef;
 const TYPE_LABELS = { travel:"Perjalanan", stay:"Istirahat", activity:"Aktivitas", arrival:"Tiba" };
 const INITIAL_ITEMS = [
   {type:"travel",   title:"Perjalanan Jakarta → Magetan", blurb:"Berangkat setelah kantor", duration:8},
@@ -424,7 +541,7 @@ const INITIAL_ITEMS = [
   {type:"arrival",  title:"Tiba di Jakarta", blurb:"Target maksimal malam ini", duration:0}
 ].map(it => Object.assign({id: uid(), overrideStart:null}, it));
 
-let itState = { start: "2026-08-21T21:00", items: INITIAL_ITEMS };
+let itState = (currentProjectId === 'bromo') ? { start: "2026-08-21T21:00", items: INITIAL_ITEMS } : { start: new Date().toISOString().slice(0,16), items: [] };
 let itLastRaw = "";
 let editingIds = new Set();
 let draggingId = null;
@@ -515,7 +632,7 @@ function renderItinerary(){
     const nextIsDifferentDay = hasNext && dateKey(times[i+1]) !== key;
     if (nextIsDifferentDay || !hasNext){ html += insertRowHtml(i + 1); }
   }
-  root.innerHTML = html;
+  root.innerHTML = html || insertRowHtml(0);
   attachItineraryHandlers();
 }
 function attachItineraryHandlers(){
@@ -602,134 +719,378 @@ function pushItinerary(){
   itineraryRef.set(itState).then(() => setStatus("Tersinkron · tanpa login", true)).catch(() => setStatus("Gagal menyimpan", false));
 }
 let itFirstLoad = true;
-itineraryRef.on('value', snap => {
-  const data = snap.val();
-  if (!data){
-    if (itFirstLoad){ itFirstLoad = false; pushItinerary(); renderItinerary(); }
-    return;
-  }
-  const normalized = { start: data.start || itState.start, items: Array.isArray(data.items) ? data.items : [] };
-  const raw = JSON.stringify(normalized);
-  if (raw === itLastRaw) return;
-  if (draggingId || editingIds.size > 0) return;
-  itLastRaw = raw; itState = normalized; renderItinerary();
-  setStatus("Tersinkron · tanpa login", true);
-}, () => setStatus("Tidak terhubung ke database", false));
+function initItinerary(){
+  itineraryRef = db.ref(pathFor('itinerary'));
+  itineraryRef.on('value', snap => {
+    const data = snap.val();
+    if (!data){
+      if (itFirstLoad){ itFirstLoad = false; pushItinerary(); renderItinerary(); }
+      return;
+    }
+    const normalized = { start: data.start || itState.start, items: Array.isArray(data.items) ? data.items : [] };
+    const raw = JSON.stringify(normalized);
+    if (raw === itLastRaw) return;
+    if (draggingId || editingIds.size > 0) return;
+    itLastRaw = raw; itState = normalized; renderItinerary();
+    setStatus("Tersinkron · tanpa login", true);
+  }, () => setStatus("Tidak terhubung ke database", false));
+}
 
 /* =====================================================
    COSTS
 ===================================================== */
-const costsRef = db.ref("bromo-costs");
+let costsRef;
 let costsState = { shared: [] };
 let costsLastRaw = "";
+let openCategories = null; // null = belum diinisialisasi (semua terbuka)
+
+function repOf(personId){
+  const p = participantsState.list.find(x => x.id === personId);
+  return (p && p.payerId) ? p.payerId : personId;
+}
+function getItemSplitEntries(item){
+  const adults = participantsState.list.filter(p => p.type === 'dewasa');
+  if (item.splitMode === 'custom'){
+    return Object.keys(item.customAmounts || {}).map(pid => ({ personId: pid, amount: Number(item.customAmounts[pid]) || 0 }));
+  }
+  if (item.splitMode === 'subset'){
+    const ids = (item.splitWith && item.splitWith.length) ? item.splitWith : adults.map(a => a.id);
+    const per = ids.length ? (Number(item.amount) || 0) / ids.length : 0;
+    return ids.map(pid => ({ personId: pid, amount: per }));
+  }
+  const per = adults.length ? (Number(item.amount) || 0) / adults.length : 0;
+  return adults.map(a => ({ personId: a.id, amount: per }));
+}
+function categoryOf(item){
+  return (item.category && item.category.trim()) ? item.category.trim() : "Lainnya";
+}
 
 function renderCosts(){
-  const adults = participantsState.list.filter(p => p.type === 'dewasa');
   const sharedRoot = document.getElementById('shared-rows');
-  sharedRoot.innerHTML = costsState.shared.map(row =>
-    '<div class="cost-item" data-id="' + row.id + '">' +
-      '<div class="cost-row-main">' +
-        '<input type="text" class="c-title" value="' + esc(row.title) + '" placeholder="Nama biaya" />' +
-        '<input type="number" class="c-amount" value="' + (row.amount||0) + '" />' +
-        '<button class="icon-btn c-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
+  const groups = {};
+  const order = [];
+  costsState.shared.forEach(item => {
+    const cat = categoryOf(item);
+    if (!groups[cat]){ groups[cat] = []; order.push(cat); }
+    groups[cat].push(item);
+  });
+  if (openCategories === null){ openCategories = new Set(order); }
+
+  sharedRoot.innerHTML = order.map(cat => {
+    const items = groups[cat];
+    const subtotal = items.reduce((s,r) => s + (Number(r.amount)||0), 0);
+    const isOpen = openCategories.has(cat);
+    return '<details class="cat-group" data-cat="' + esc(cat) + '"' + (isOpen ? ' open' : '') + '>' +
+      '<summary>' + esc(cat) + '<span class="cat-total">' + rp(subtotal) + '</span><span class="chev">' + iconSvg('plus',12) + '</span></summary>' +
+      '<div class="cat-group-body">' +
+        items.map(row => {
+          const adults = participantsState.list.filter(p => p.type === 'dewasa');
+          const isCustom = row.splitMode === 'custom';
+          const displayAmount = isCustom ? Object.values(row.customAmounts||{}).reduce((s,v)=>s+(Number(v)||0),0) : (row.amount||0);
+          let extra = '';
+          if (row.splitMode === 'subset'){
+            const sel = row.splitWith || [];
+            extra = '<div class="split-picker">' + adults.map(a =>
+              '<label class="pill-check"><input type="checkbox" class="c-subset" data-pid="' + a.id + '"' + (sel.includes(a.id) ? ' checked' : '') + ' />' + esc(a.name) + '</label>'
+            ).join('') + '</div>';
+          } else if (row.splitMode === 'custom'){
+            const ca = row.customAmounts || {};
+            extra = '<div class="custom-list">' + participantsState.list.map(p =>
+              '<div class="custom-row"><label class="pill-check"><input type="checkbox" class="c-custom-toggle" data-pid="' + p.id + '"' + ((p.id in ca) ? ' checked' : '') + ' />' + esc(p.name) + '</label>' +
+              '<input type="number" class="c-custom-amt" data-pid="' + p.id + '" value="' + (ca[p.id]||0) + '"' + (!(p.id in ca) ? ' disabled' : '') + ' /></div>'
+            ).join('') + '</div>';
+          }
+          return '<div class="cost-item" data-id="' + row.id + '">' +
+            '<div class="cost-row-main">' +
+              '<input type="text" class="c-title" value="' + esc(row.title) + '" placeholder="Nama biaya" />' +
+              '<input type="number" class="c-amount"' + (isCustom ? ' readonly' : '') + ' value="' + displayAmount + '" />' +
+              '<button class="icon-btn c-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
+            '</div>' +
+            '<div class="cost-row-meta">' +
+              '<input type="text" class="c-category" value="' + esc(row.category||'') + '" placeholder="Kategori (misal: BBM, Konsumsi)" style="max-width:160px;" />' +
+              '<select class="c-paidby"><option value="">— PIC —</option>' +
+                participantsState.list.map(p => '<option value="' + p.id + '"' + (row.paidBy===p.id?' selected':'') + '>' + esc(p.name) + '</option>').join('') +
+              '</select>' +
+              '<select class="c-splitmode">' +
+                '<option value="all"' + (row.splitMode==='all'||!row.splitMode?' selected':'') + '>Rata ke semua dewasa</option>' +
+                '<option value="subset"' + (row.splitMode==='subset'?' selected':'') + '>Rata ke sebagian orang</option>' +
+                '<option value="custom"' + (row.splitMode==='custom'?' selected':'') + '>Custom per orang</option>' +
+              '</select>' +
+            '</div>' +
+            extra +
+          '</div>';
+        }).join('') +
       '</div>' +
-      '<div class="cost-row-meta">' +
-        '<select class="c-paidby"><option value="">— PIC —</option>' +
-          participantsState.list.map(p => '<option value="' + p.id + '"' + (row.paidBy===p.id?' selected':'') + '>' + esc(p.name) + '</option>').join('') +
-        '</select>' +
-      '</div>' +
-    '</div>'
-  ).join('');
-  const sharedTotal = costsState.shared.reduce((s,r) => s + (Number(r.amount)||0), 0);
-  const split = adults.length > 0 ? sharedTotal / adults.length : 0;
+    '</details>';
+  }).join('') || '<p class="blurb">Belum ada biaya bersama.</p>';
+
+  const sharedTotal = costsState.shared.reduce((s,r) => {
+    if (r.splitMode === 'custom') return s + Object.values(r.customAmounts||{}).reduce((a,v)=>a+(Number(v)||0),0);
+    return s + (Number(r.amount)||0);
+  }, 0);
   document.getElementById('shared-total').textContent = rp(sharedTotal);
-  document.getElementById('shared-split-row').querySelector('span:first-child').textContent = 'Per orang dewasa (÷' + adults.length + ')';
-  document.getElementById('shared-split').textContent = rp(split);
 
   attachCostHandlers();
+  renderLoans();
   renderSettlement();
 }
 
 function attachCostHandlers(){
+  document.querySelectorAll('.cat-group').forEach(det => det.addEventListener('toggle', e => {
+    const cat = e.target.getAttribute('data-cat');
+    if (e.target.open) openCategories.add(cat); else openCategories.delete(cat);
+  }));
   document.querySelectorAll('.c-title').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.cost-item').getAttribute('data-id');
     costsState.shared.find(r => r.id === id).title = e.target.value.trim(); pushCosts();
   }));
   document.querySelectorAll('.c-amount').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.cost-item').getAttribute('data-id');
-    costsState.shared.find(r => r.id === id).amount = parseFloat(e.target.value) || 0; renderCosts(); pushCosts();
+    const row = costsState.shared.find(r => r.id === id);
+    if (row.splitMode === 'custom') return;
+    row.amount = parseFloat(e.target.value) || 0; renderCosts(); pushCosts();
   }));
   document.querySelectorAll('.c-del').forEach(btn => btn.addEventListener('click', e => {
     const id = e.target.closest('.cost-item').getAttribute('data-id');
     costsState.shared = costsState.shared.filter(r => r.id !== id); renderCosts(); pushCosts();
+  }));
+  document.querySelectorAll('.c-category').forEach(inp => inp.addEventListener('change', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
+    const cat = e.target.value.trim();
+    costsState.shared.find(r => r.id === id).category = cat;
+    if (cat) openCategories.add(cat);
+    renderCosts(); pushCosts();
   }));
   document.querySelectorAll('.c-paidby').forEach(sel => sel.addEventListener('change', e => {
     const id = e.target.closest('.cost-item').getAttribute('data-id');
     costsState.shared.find(r => r.id === id).paidBy = e.target.value || null;
     renderCosts(); pushCosts();
   }));
+  document.querySelectorAll('.c-splitmode').forEach(sel => sel.addEventListener('change', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
+    const row = costsState.shared.find(r => r.id === id);
+    row.splitMode = e.target.value;
+    if (row.splitMode === 'subset' && !row.splitWith) row.splitWith = [];
+    if (row.splitMode === 'custom' && !row.customAmounts) row.customAmounts = {};
+    renderCosts(); pushCosts();
+  }));
+  document.querySelectorAll('.c-subset').forEach(chk => chk.addEventListener('change', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
+    const pid = e.target.getAttribute('data-pid');
+    const row = costsState.shared.find(r => r.id === id);
+    row.splitWith = row.splitWith || [];
+    if (e.target.checked){ if (!row.splitWith.includes(pid)) row.splitWith.push(pid); }
+    else { row.splitWith = row.splitWith.filter(x => x !== pid); }
+    renderCosts(); pushCosts();
+  }));
+  document.querySelectorAll('.c-custom-toggle').forEach(chk => chk.addEventListener('change', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
+    const pid = e.target.getAttribute('data-pid');
+    const row = costsState.shared.find(r => r.id === id);
+    row.customAmounts = row.customAmounts || {};
+    if (e.target.checked){ row.customAmounts[pid] = row.customAmounts[pid] || 0; }
+    else { delete row.customAmounts[pid]; }
+    renderCosts(); pushCosts();
+  }));
+  document.querySelectorAll('.c-custom-amt').forEach(inp => inp.addEventListener('change', e => {
+    const id = e.target.closest('.cost-item').getAttribute('data-id');
+    const pid = e.target.getAttribute('data-pid');
+    const row = costsState.shared.find(r => r.id === id);
+    row.customAmounts = row.customAmounts || {};
+    row.customAmounts[pid] = parseFloat(e.target.value) || 0;
+    renderCosts(); pushCosts();
+  }));
 }
 
-function renderSettlement(){
-  const adults = participantsState.list.filter(p => p.type === 'dewasa');
-  const numAdults = adults.length;
-  const totalShared = costsState.shared.reduce((s,r) => s + (Number(r.amount)||0), 0);
-  const fairShare = numAdults > 0 ? totalShared / numAdults : 0;
-
-  const paidMap = {};
-  participantsState.list.forEach(p => { paidMap[p.id] = 0; });
-  costsState.shared.forEach(r => { if (r.paidBy && paidMap.hasOwnProperty(r.paidBy)) paidMap[r.paidBy] += Number(r.amount)||0; });
-
-  const balances = participantsState.list.map(p => {
-    const owed = p.type === 'dewasa' ? fairShare : 0;
-    return { name: p.name, type: p.type, paid: paidMap[p.id]||0, owed, net: (paidMap[p.id]||0) - owed };
+document.getElementById('add-shared-btn').addEventListener('click', () => {
+  costsState.shared.push({ id: uid(), title: "", amount: 0, category: "", paidBy: null, splitMode: 'all', splitWith: [], customAmounts: {} });
+  renderCosts(); pushCosts();
+});
+function pushCosts(){
+  costsLastRaw = JSON.stringify(costsState);
+  setStatus("Menyimpan…", true);
+  costsRef.set(costsState).then(() => setStatus("Tersinkron · tanpa login", true)).catch(() => setStatus("Gagal menyimpan", false));
+}
+let costsFirstLoad = true;
+function initCosts(){
+  costsRef = db.ref(pathFor('costs'));
+  costsRef.on('value', snap => {
+    const data = snap.val();
+    if (!data){
+      if (costsFirstLoad){ costsFirstLoad = false; pushCosts(); renderCosts(); }
+      return;
+    }
+    const normalized = { shared: Array.isArray(data.shared) ? data.shared : [] };
+    const raw = JSON.stringify(normalized);
+    if (raw === costsLastRaw) return;
+    costsLastRaw = raw; costsState = normalized; renderCosts();
+    setStatus("Tersinkron · tanpa login", true);
   });
+}
 
-  // Hitung utang per item: tiap item displit rata ke semua orang dewasa,
-  // lalu tiap orang (selain PIC item itu) berutang porsinya ke PIC tersebut.
+/* =====================================================
+   LOANS (pinjaman antar peserta)
+===================================================== */
+let loansRef;
+let loansState = { list: [] };
+let loansLastRaw = "";
+
+function renderLoans(){
+  const root = document.getElementById('loan-rows');
+  if (!root) return;
+  root.innerHTML = loansState.list.map(loan =>
+    '<div class="loan-row" data-id="' + loan.id + '">' +
+      '<select class="l-lender">' + participantsState.list.map(p => '<option value="' + p.id + '"' + (loan.lenderId===p.id?' selected':'') + '>' + esc(p.name) + '</option>').join('') + '</select>' +
+      '<span class="loan-arrow">→</span>' +
+      '<select class="l-borrower">' + participantsState.list.map(p => '<option value="' + p.id + '"' + (loan.borrowerId===p.id?' selected':'') + '>' + esc(p.name) + '</option>').join('') + '</select>' +
+      '<input type="number" class="l-amount" value="' + (loan.amount||0) + '" />' +
+      '<input type="text" class="l-note" value="' + esc(loan.note||'') + '" placeholder="Catatan (opsional)" />' +
+      '<button class="icon-btn l-del" aria-label="Hapus">' + iconSvg('trash',14) + '</button>' +
+    '</div>'
+  ).join('') || '<p class="blurb">Belum ada pinjaman.</p>';
+
+  root.querySelectorAll('.l-lender').forEach(sel => sel.addEventListener('change', e => {
+    const id = e.target.closest('.loan-row').getAttribute('data-id');
+    loansState.list.find(l => l.id === id).lenderId = e.target.value; pushLoans();
+  }));
+  root.querySelectorAll('.l-borrower').forEach(sel => sel.addEventListener('change', e => {
+    const id = e.target.closest('.loan-row').getAttribute('data-id');
+    loansState.list.find(l => l.id === id).borrowerId = e.target.value; pushLoans();
+  }));
+  root.querySelectorAll('.l-amount').forEach(inp => inp.addEventListener('change', e => {
+    const id = e.target.closest('.loan-row').getAttribute('data-id');
+    loansState.list.find(l => l.id === id).amount = parseFloat(e.target.value) || 0;
+    renderLoans(); renderSettlement(); pushLoans();
+  }));
+  root.querySelectorAll('.l-note').forEach(inp => inp.addEventListener('change', e => {
+    const id = e.target.closest('.loan-row').getAttribute('data-id');
+    loansState.list.find(l => l.id === id).note = e.target.value.trim(); pushLoans();
+  }));
+  root.querySelectorAll('.l-del').forEach(btn => btn.addEventListener('click', e => {
+    const id = e.target.closest('.loan-row').getAttribute('data-id');
+    loansState.list = loansState.list.filter(l => l.id !== id);
+    renderLoans(); renderSettlement(); pushLoans();
+  }));
+}
+document.getElementById('add-loan-btn').addEventListener('click', () => {
+  const p1 = participantsState.list[0], p2 = participantsState.list[1];
+  loansState.list.push({ id: uid(), lenderId: p1 ? p1.id : null, borrowerId: p2 ? p2.id : null, amount: 0, note: "" });
+  renderLoans(); renderSettlement(); pushLoans();
+});
+function pushLoans(){
+  loansLastRaw = JSON.stringify(loansState);
+  setStatus("Menyimpan…", true);
+  loansRef.set(loansState).then(() => setStatus("Tersinkron · tanpa login", true)).catch(() => setStatus("Gagal menyimpan", false));
+}
+let loansFirstLoad = true;
+function initLoans(){
+  loansRef = db.ref(pathFor('loans'));
+  loansRef.on('value', snap => {
+    const data = snap.val();
+    if (!data){
+      if (loansFirstLoad){ loansFirstLoad = false; pushLoans(); renderLoans(); }
+      return;
+    }
+    const normalized = { list: Array.isArray(data.list) ? data.list : [] };
+    const raw = JSON.stringify(normalized);
+    if (raw === loansLastRaw) return;
+    loansLastRaw = raw; loansState = normalized; renderLoans(); renderSettlement();
+    setStatus("Tersinkron · tanpa login", true);
+  });
+}
+
+/* =====================================================
+   SETTLEMENT (saldo & cara pelunasan, lewat representative)
+===================================================== */
+function renderSettlement(){
   const nameById = {};
   participantsState.list.forEach(p => { nameById[p.id] = p.name; });
-  const debtMap = {}; // ownerId -> { picId: amount }
-  if (numAdults > 0){
-    costsState.shared.forEach(item => {
-      if (!item.paidBy) return;
-      const share = (Number(item.amount)||0) / numAdults;
-      adults.forEach(a => {
-        if (a.id === item.paidBy) return;
-        debtMap[a.id] = debtMap[a.id] || {};
-        debtMap[a.id][item.paidBy] = (debtMap[a.id][item.paidBy] || 0) + share;
-      });
+
+  // Saldo per orang (individual, sebelum representative)
+  const paidMap = {}, owedMap = {};
+  participantsState.list.forEach(p => { paidMap[p.id] = 0; owedMap[p.id] = 0; });
+  costsState.shared.forEach(item => {
+    if (item.paidBy && paidMap.hasOwnProperty(item.paidBy)){
+      const amt = item.splitMode === 'custom' ? Object.values(item.customAmounts||{}).reduce((s,v)=>s+(Number(v)||0),0) : (Number(item.amount)||0);
+      paidMap[item.paidBy] += amt;
+    }
+    getItemSplitEntries(item).forEach(en => { if (owedMap.hasOwnProperty(en.personId)) owedMap[en.personId] += en.amount; });
+  });
+  loansState.list.forEach(loan => {
+    if (loan.lenderId && paidMap.hasOwnProperty(loan.lenderId)) paidMap[loan.lenderId] += Number(loan.amount)||0;
+    if (loan.borrowerId && owedMap.hasOwnProperty(loan.borrowerId)) owedMap[loan.borrowerId] += Number(loan.amount)||0;
+  });
+  const balances = participantsState.list.map(p => ({
+    name: p.name, type: p.type,
+    net: (paidMap[p.id]||0) - (owedMap[p.id]||0)
+  }));
+
+  // Debt mentah per-item/loan (siapa berutang ke siapa), lalu dialihkan ke representative
+  const debtMap = {};
+  costsState.shared.forEach(item => {
+    if (!item.paidBy) return;
+    getItemSplitEntries(item).forEach(en => {
+      if (en.personId === item.paidBy || en.amount <= 0) return;
+      debtMap[en.personId] = debtMap[en.personId] || {};
+      debtMap[en.personId][item.paidBy] = (debtMap[en.personId][item.paidBy] || 0) + en.amount;
     });
-  }
-  const transactions = [];
-  // Netting: kalau dua orang sama-sama berutang satu sama lain (biasanya sesama PIC),
-  // sisakan cuma selisihnya jadi satu arah saja.
+  });
+  loansState.list.forEach(loan => {
+    if (!loan.lenderId || !loan.borrowerId || loan.lenderId === loan.borrowerId) return;
+    const amt = Number(loan.amount)||0;
+    if (amt <= 0) return;
+    debtMap[loan.borrowerId] = debtMap[loan.borrowerId] || {};
+    debtMap[loan.borrowerId][loan.lenderId] = (debtMap[loan.borrowerId][loan.lenderId] || 0) + amt;
+  });
+
+  // Alihkan ke representative (payerId), gabungkan pasangan yang sama
+  const repDebtMap = {};
+  Object.keys(debtMap).forEach(owerId => {
+    const repOwer = repOf(owerId);
+    Object.keys(debtMap[owerId]).forEach(picId => {
+      const repPic = repOf(picId);
+      if (repOwer === repPic) return;
+      repDebtMap[repOwer] = repDebtMap[repOwer] || {};
+      repDebtMap[repOwer][repPic] = (repDebtMap[repOwer][repPic] || 0) + debtMap[owerId][picId];
+    });
+  });
+
+  // Netting pasangan yang saling berutang
   const involvedIds = new Set();
-  Object.keys(debtMap).forEach(o => { involvedIds.add(o); Object.keys(debtMap[o]).forEach(p => involvedIds.add(p)); });
+  Object.keys(repDebtMap).forEach(o => { involvedIds.add(o); Object.keys(repDebtMap[o]).forEach(p => involvedIds.add(p)); });
   const idList = Array.from(involvedIds);
   for (let i = 0; i < idList.length; i++){
     for (let j = i + 1; j < idList.length; j++){
       const a = idList[i], b = idList[j];
-      const aOwesB = (debtMap[a] && debtMap[a][b]) || 0;
-      const bOwesA = (debtMap[b] && debtMap[b][a]) || 0;
+      const aOwesB = (repDebtMap[a] && repDebtMap[a][b]) || 0;
+      const bOwesA = (repDebtMap[b] && repDebtMap[b][a]) || 0;
       if (aOwesB > 0 && bOwesA > 0){
-        if (aOwesB > bOwesA){
-          debtMap[a][b] = aOwesB - bOwesA;
-          delete debtMap[b][a];
-        } else if (bOwesA > aOwesB){
-          debtMap[b][a] = bOwesA - aOwesB;
-          delete debtMap[a][b];
-        } else {
-          delete debtMap[a][b];
-          delete debtMap[b][a];
-        }
+        if (aOwesB > bOwesA){ repDebtMap[a][b] = aOwesB - bOwesA; delete repDebtMap[b][a]; }
+        else if (bOwesA > aOwesB){ repDebtMap[b][a] = bOwesA - aOwesB; delete repDebtMap[a][b]; }
+        else { delete repDebtMap[a][b]; delete repDebtMap[b][a]; }
       }
     }
   }
-  Object.keys(debtMap).forEach(owerId => {
-    Object.keys(debtMap[owerId]).forEach(picId => {
-      const amt = debtMap[owerId][picId];
-      if (amt > 500) transactions.push({ from: nameById[owerId] || "?", to: nameById[picId] || "?", amount: amt });
+
+  // Susun label "mewakili ..." per representative
+  const representsMap = {};
+  participantsState.list.forEach(p => {
+    const rep = repOf(p.id);
+    if (rep !== p.id){
+      representsMap[rep] = representsMap[rep] || [];
+      representsMap[rep].push(p.name);
+    }
+  });
+  function labelFor(id){
+    const base = nameById[id] || "?";
+    return representsMap[id] ? base + " (mewakili " + representsMap[id].join(', ') + ")" : base;
+  }
+
+  const transactions = [];
+  Object.keys(repDebtMap).forEach(owerId => {
+    Object.keys(repDebtMap[owerId]).forEach(picId => {
+      const amt = repDebtMap[owerId][picId];
+      if (amt > 500) transactions.push({ from: labelFor(owerId), to: labelFor(picId), amount: amt });
     });
   });
   transactions.sort((a,b) => a.from.localeCompare(b.from) || b.amount - a.amount);
@@ -749,36 +1110,15 @@ function renderSettlement(){
     '<div class="card"><div class="card-header">Saldo per orang</div>' + balanceRows +
       '<p class="blurb" style="margin-top:10px;">Hijau = sudah bayar lebih dari bagiannya (akan menerima). Merah = belum bayar bagiannya (perlu bayar).</p>' +
     '</div>' +
-    '<div class="card"><div class="card-header">Cara pelunasan</div>' + txRows + '</div>';
+    '<div class="card"><div class="card-header">Cara pelunasan</div>' + txRows +
+      '<p class="blurb" style="margin-top:10px;">Kalau ada peserta yang "diwakilkan", pembayarannya digabung lewat orang yang mewakili (lihat tab Peserta).</p>' +
+    '</div>';
 }
-
-document.getElementById('add-shared-btn').addEventListener('click', () => {
-  costsState.shared.push({ id: uid(), title: "", amount: 0, paidBy: null });
-  renderCosts(); pushCosts();
-});
-function pushCosts(){
-  costsLastRaw = JSON.stringify(costsState);
-  setStatus("Menyimpan…", true);
-  costsRef.set(costsState).then(() => setStatus("Tersinkron · tanpa login", true)).catch(() => setStatus("Gagal menyimpan", false));
-}
-let costsFirstLoad = true;
-costsRef.on('value', snap => {
-  const data = snap.val();
-  if (!data){
-    if (costsFirstLoad){ costsFirstLoad = false; pushCosts(); renderCosts(); }
-    return;
-  }
-  const normalized = { shared: Array.isArray(data.shared) ? data.shared : [] };
-  const raw = JSON.stringify(normalized);
-  if (raw === costsLastRaw) return;
-  costsLastRaw = raw; costsState = normalized; renderCosts();
-  setStatus("Tersinkron · tanpa login", true);
-});
 
 /* =====================================================
    CHECKLIST
 ===================================================== */
-const checklistRef = db.ref("bromo-checklist");
+let checklistRef;
 let checklistState = { items: [] };
 let checklistLastRaw = "";
 
@@ -839,23 +1179,121 @@ function pushChecklist(){
   checklistRef.set(checklistState).then(() => setStatus("Tersinkron · tanpa login", true)).catch(() => setStatus("Gagal menyimpan", false));
 }
 let checklistFirstLoad = true;
-checklistRef.on('value', snap => {
-  const data = snap.val();
-  if (!data){
-    if (checklistFirstLoad){ checklistFirstLoad = false; pushChecklist(); renderChecklist(); }
-    return;
+function initChecklist(){
+  checklistRef = db.ref(pathFor('checklist'));
+  checklistRef.on('value', snap => {
+    const data = snap.val();
+    if (!data){
+      if (checklistFirstLoad){ checklistFirstLoad = false; pushChecklist(); renderChecklist(); }
+      return;
+    }
+    const normalized = { items: Array.isArray(data.items) ? data.items : [] };
+    const raw = JSON.stringify(normalized);
+    if (raw === checklistLastRaw) return;
+    checklistLastRaw = raw; checklistState = normalized; renderChecklist();
+    setStatus("Tersinkron · tanpa login", true);
+  });
+}
+
+/* =====================================================
+   DETAIL VIEW bootstrap
+===================================================== */
+function initDetailProject(projectId, projectMeta){
+  if (projectId !== 'bromo'){
+    metaState = { title: (projectMeta && projectMeta.name) || "Kegiatan baru", desc: "" };
   }
-  const normalized = { items: Array.isArray(data.items) ? data.items : [] };
-  const raw = JSON.stringify(normalized);
-  if (raw === checklistLastRaw) return;
-  checklistLastRaw = raw; checklistState = normalized; renderChecklist();
-  setStatus("Tersinkron · tanpa login", true);
+  initMeta();
+  initParticipants();
+  initItinerary();
+  initCosts();
+  initLoans();
+  initChecklist();
+  renderParticipants();
+  renderItinerary();
+  renderCosts();
+  renderChecklist();
+  applyActiveTabs(projectMeta && projectMeta.tabs);
+}
+
+/* =====================================================
+   LANDING PAGE (daftar kegiatan)
+===================================================== */
+const PROJECT_ICON = {
+  itinerary: 'Itinerary', costs: 'Biaya', checklist: 'Checklist', participants: 'Peserta'
+};
+const projectsListRef = db.ref('projects-list');
+const BUILTIN_PROJECTS = {
+  bromo: { name: 'Trip ke Bromo', tabs: ALL_TAB_KEYS, builtin: true }
+};
+
+function renderProjectCards(registryData){
+  const root = document.getElementById('project-cards');
+  const all = Object.assign({}, BUILTIN_PROJECTS, registryData || {});
+  const ids = Object.keys(all).sort((a,b) => (all[a].createdAt||0) - (all[b].createdAt||0));
+  root.innerHTML = ids.map(id => {
+    const p = all[id];
+    const tabs = (p.tabs && p.tabs.length) ? p.tabs : ALL_TAB_KEYS;
+    return '<div style="display:flex; align-items:center; gap:8px;">' +
+      '<a class="project-card" href="?project=' + encodeURIComponent(id) + '" style="flex:1;">' +
+        '<div class="pc-body">' +
+          '<p class="pc-name">' + esc(p.name || id) + '</p>' +
+          '<div class="pc-tabs">' + tabs.map(t => '<span>' + esc(PROJECT_ICON[t] || t) + '</span>').join('') + '</div>' +
+        '</div>' +
+        '<span class="pc-arrow">' + iconSvg('arrow',16) + '</span>' +
+      '</a>' +
+      (p.builtin ? '' : '<button class="icon-btn pc-del" data-id="' + esc(id) + '" aria-label="Hapus">' + iconSvg('trash',14) + '</button>') +
+    '</div>';
+  }).join('');
+  root.querySelectorAll('.pc-del').forEach(btn => btn.addEventListener('click', e => {
+    e.preventDefault();
+    const id = e.currentTarget.getAttribute('data-id');
+    if (window.confirm('Hapus kegiatan ini? Data di dalamnya tidak bisa dikembalikan.')){
+      projectsListRef.child(id).remove();
+    }
+  }));
+}
+
+document.getElementById('show-new-project-btn').addEventListener('click', () => {
+  document.getElementById('show-new-project-btn').style.display = 'none';
+  document.getElementById('new-project-form').style.display = 'flex';
+});
+document.getElementById('cancel-new-project-btn').addEventListener('click', () => {
+  document.getElementById('show-new-project-btn').style.display = '';
+  document.getElementById('new-project-form').style.display = 'none';
+});
+document.getElementById('create-project-btn').addEventListener('click', () => {
+  const name = document.getElementById('new-project-name').value.trim();
+  if (!name){ document.getElementById('new-project-name').focus(); return; }
+  const tabs = Array.from(document.querySelectorAll('.np-tab:checked')).map(c => c.value);
+  const id = uid();
+  projectsListRef.child(id).set({ name, tabs, createdAt: Date.now() }).then(() => {
+    window.location.href = '?project=' + encodeURIComponent(id);
+  });
 });
 
-renderParticipants();
-renderItinerary();
-renderCosts();
-renderChecklist();
+function initLandingPage(){
+  projectsListRef.on('value', snap => {
+    renderProjectCards(snap.val() || {});
+  });
+}
+
+/* =====================================================
+   ROUTE
+===================================================== */
+if (currentProjectId){
+  document.getElementById('detail-view').style.display = '';
+  if (currentProjectId === 'bromo'){
+    initDetailProject('bromo', BUILTIN_PROJECTS.bromo);
+  } else {
+    projectsListRef.child(currentProjectId).once('value').then(snap => {
+      const meta = snap.val() || { name: 'Kegiatan', tabs: ALL_TAB_KEYS };
+      initDetailProject(currentProjectId, meta);
+    });
+  }
+} else {
+  document.getElementById('landing-page').style.display = '';
+  initLandingPage();
+}
 </script>
 </body>
 </html>
