@@ -761,7 +761,7 @@ function initItinerary(){
 let costsRef;
 let costsState = { shared: [] };
 let costsLastRaw = "";
-let openCategories = null; // null = belum diinisialisasi (semua terbuka)
+let closedGroups = new Set(); // key grup yang sengaja ditutup user; grup baru default terbuka
 
 function repOf(personId){
   const p = participantsState.list.find(x => x.id === personId);
@@ -824,42 +824,46 @@ function renderCostItemHtml(row){
   '</div>';
 }
 
+function fmtDateLabel(iso){
+  const parts = (iso||'').split('-');
+  return parts.length === 3 ? (parts[2] + '/' + parts[1] + '/' + parts[0]) : 'Tanpa tanggal';
+}
+
 function renderCosts(){
   const sharedRoot = document.getElementById('shared-rows');
   const sortSelect = document.getElementById('costs-sort-select');
   if (sortSelect) sortSelect.value = costsSortMode;
 
-  if (costsSortMode === 'date_desc' || costsSortMode === 'date_asc'){
-    const items = costsState.shared.slice().sort((a,b) => {
-      const da = a.date || '', db = b.date || '';
-      if (!da && !db) return 0;
-      if (!da) return 1;
-      if (!db) return -1;
-      return costsSortMode === 'date_desc' ? db.localeCompare(da) : da.localeCompare(db);
-    });
-    sharedRoot.innerHTML = items.length ? items.map(renderCostItemHtml).join('') : '<p class="blurb">Belum ada biaya bersama.</p>';
-  } else {
-    const groups = {};
-    const order = [];
-    costsState.shared.forEach(item => {
-      const cat = categoryOf(item);
-      if (!groups[cat]){ groups[cat] = []; order.push(cat); }
-      groups[cat].push(item);
-    });
-    if (openCategories === null){ openCategories = new Set(order); }
-    const subtotalOf = cat => groups[cat].reduce((s,r) => s + (Number(r.amount)||0), 0);
-    order.sort((a,b) => costsSortMode === 'cat_asc' ? subtotalOf(a) - subtotalOf(b) : subtotalOf(b) - subtotalOf(a));
+  const byDate = costsSortMode === 'date_desc' || costsSortMode === 'date_asc';
+  const groups = {};
+  const order = [];
+  costsState.shared.forEach(item => {
+    const key = byDate ? (item.date || '') : categoryOf(item);
+    const label = byDate ? fmtDateLabel(item.date) : key;
+    if (!groups[key]){ groups[key] = { label, items: [] }; order.push(key); }
+    groups[key].items.push(item);
+  });
 
-    sharedRoot.innerHTML = order.map(cat => {
-      const items = groups[cat];
-      const subtotal = subtotalOf(cat);
-      const isOpen = openCategories.has(cat);
-      return '<details class="cat-group" data-cat="' + esc(cat) + '"' + (isOpen ? ' open' : '') + '>' +
-        '<summary>' + esc(cat) + '<span class="cat-total">' + rp(subtotal) + '</span><span class="chev">' + iconSvg('plus',12) + '</span></summary>' +
-        '<div class="cat-group-body">' + items.map(renderCostItemHtml).join('') + '</div>' +
-      '</details>';
-    }).join('') || '<p class="blurb">Belum ada biaya bersama.</p>';
+  if (byDate){
+    order.sort((a,b) => {
+      if (a === '') return 1;
+      if (b === '') return -1;
+      return costsSortMode === 'date_desc' ? b.localeCompare(a) : a.localeCompare(b);
+    });
+  } else {
+    const subtotalOf = key => groups[key].items.reduce((s,r) => s + (Number(r.amount)||0), 0);
+    order.sort((a,b) => costsSortMode === 'cat_asc' ? subtotalOf(a) - subtotalOf(b) : subtotalOf(b) - subtotalOf(a));
   }
+
+  sharedRoot.innerHTML = order.map(key => {
+    const g = groups[key];
+    const subtotal = g.items.reduce((s,r) => s + (Number(r.amount)||0), 0);
+    const isOpen = !closedGroups.has(key);
+    return '<details class="cat-group" data-cat="' + esc(key) + '"' + (isOpen ? ' open' : '') + '>' +
+      '<summary>' + esc(g.label) + '<span class="cat-total">' + rp(subtotal) + '</span><span class="chev">' + iconSvg('plus',12) + '</span></summary>' +
+      '<div class="cat-group-body">' + g.items.map(renderCostItemHtml).join('') + '</div>' +
+    '</details>';
+  }).join('') || '<p class="blurb">Belum ada biaya bersama.</p>';
 
   const sharedTotal = costsState.shared.reduce((s,r) => {
     if (r.splitMode === 'custom') return s + Object.values(r.customAmounts||{}).reduce((a,v)=>a+(Number(v)||0),0);
@@ -878,8 +882,8 @@ document.getElementById('costs-sort-select').addEventListener('change', e => {
 
 function attachCostHandlers(){
   document.querySelectorAll('.cat-group').forEach(det => det.addEventListener('toggle', e => {
-    const cat = e.target.getAttribute('data-cat');
-    if (e.target.open) openCategories.add(cat); else openCategories.delete(cat);
+    const key = e.target.getAttribute('data-cat');
+    if (e.target.open) closedGroups.delete(key); else closedGroups.add(key);
   }));
   document.querySelectorAll('.c-title').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.cost-item').getAttribute('data-id');
@@ -904,7 +908,6 @@ function attachCostHandlers(){
     const id = e.target.closest('.cost-item').getAttribute('data-id');
     const cat = e.target.value.trim();
     costsState.shared.find(r => r.id === id).category = cat;
-    if (cat) openCategories.add(cat);
     renderCosts(); pushCosts();
   }));
   document.querySelectorAll('.c-paidby').forEach(sel => sel.addEventListener('change', e => {
@@ -951,7 +954,6 @@ function attachCostHandlers(){
 document.getElementById('add-shared-btn').addEventListener('click', () => {
   const newItem = { id: uid(), title: "", amount: 0, category: "", paidBy: null, splitMode: 'all', splitWith: [], customAmounts: {}, date: "" };
   costsState.shared.push(newItem);
-  if (openCategories) openCategories.add(categoryOf(newItem));
   renderCosts(); pushCosts();
 });
 function pushCosts(){
