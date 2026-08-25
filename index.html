@@ -483,17 +483,17 @@ function renderParticipants(){
   root.querySelectorAll('.pr-name').forEach(inp => inp.addEventListener('change', e => {
     const id = e.target.closest('.person-row').getAttribute('data-id');
     participantsState.list.find(p => p.id === id).name = e.target.value.trim() || "Tanpa nama";
-    renderParticipants(); pushParticipants();
+    renderParticipants(); renderCosts(); renderChecklist(); pushParticipants();
   }));
   root.querySelectorAll('.pr-type').forEach(sel => sel.addEventListener('change', e => {
     const id = e.target.closest('.person-row').getAttribute('data-id');
     participantsState.list.find(p => p.id === id).type = e.target.value;
-    pushParticipants();
+    renderCosts(); renderChecklist(); pushParticipants();
   }));
   root.querySelectorAll('.pr-payer').forEach(sel => sel.addEventListener('change', e => {
     const id = e.target.closest('.person-row').getAttribute('data-id');
     participantsState.list.find(p => p.id === id).payerId = e.target.value || null;
-    pushParticipants();
+    renderCosts(); renderChecklist(); pushParticipants();
   }));
   root.querySelectorAll('.pr-del').forEach(btn => btn.addEventListener('click', e => {
     const id = e.target.closest('.person-row').getAttribute('data-id');
@@ -504,7 +504,7 @@ function renderParticipants(){
 }
 document.getElementById('add-participant-btn').addEventListener('click', () => {
   participantsState.list.push({ id: uid(), name: "", type: "dewasa", payerId: null });
-  renderParticipants(); pushParticipants();
+  renderParticipants(); renderCosts(); renderChecklist(); pushParticipants();
 });
 function pushParticipants(){
   participantsLastRaw = JSON.stringify(participantsState);
@@ -1015,7 +1015,7 @@ function initLoans(){
 ===================================================== */
 function renderSettlement(){
   const nameById = {};
-  participantsState.list.forEach(p => { nameById[p.id] = p.name; });
+  participantsState.list.forEach(p => { nameById[p.id] = p.name || "Tanpa nama"; });
 
   // Debt biaya bersama (siapa berutang ke siapa), lalu dialihkan ke representative keluarga
   const debtMap = {};
@@ -1164,6 +1164,7 @@ function renderSettlement(){
   ).join('') : '<p class="blurb">Belum ada pinjaman.</p>';
 
   document.getElementById('settlement-card').innerHTML =
+    '<div class="day-header" style="margin-left:0;"><span class="label">Tata cara pelunasan</span><span class="line"></span></div>' +
     picCards +
     '<div class="card"><div class="card-header">Cara pelunasan (biaya bersama)</div>' + txRows +
       '<p class="blurb" style="margin-top:10px;">Kalau ada peserta yang "diwakilkan", tagihannya digabung lewat orang yang mewakili — nama itu ditulis dengan yang diwakilinya dalam kurung.</p>' +
