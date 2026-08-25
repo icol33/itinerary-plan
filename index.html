@@ -1017,25 +1017,6 @@ function renderSettlement(){
   const nameById = {};
   participantsState.list.forEach(p => { nameById[p.id] = p.name; });
 
-  // Saldo per orang (individual, sebelum representative)
-  const paidMap = {}, owedMap = {};
-  participantsState.list.forEach(p => { paidMap[p.id] = 0; owedMap[p.id] = 0; });
-  costsState.shared.forEach(item => {
-    if (item.paidBy && paidMap.hasOwnProperty(item.paidBy)){
-      const amt = item.splitMode === 'custom' ? Object.values(item.customAmounts||{}).reduce((s,v)=>s+(Number(v)||0),0) : (Number(item.amount)||0);
-      paidMap[item.paidBy] += amt;
-    }
-    getItemSplitEntries(item).forEach(en => { if (owedMap.hasOwnProperty(en.personId)) owedMap[en.personId] += en.amount; });
-  });
-  loansState.list.forEach(loan => {
-    if (loan.lenderId && paidMap.hasOwnProperty(loan.lenderId)) paidMap[loan.lenderId] += Number(loan.amount)||0;
-    if (loan.borrowerId && owedMap.hasOwnProperty(loan.borrowerId)) owedMap[loan.borrowerId] += Number(loan.amount)||0;
-  });
-  const balances = participantsState.list.map(p => ({
-    name: p.name, type: p.type,
-    net: (paidMap[p.id]||0) - (owedMap[p.id]||0)
-  }));
-
   // Debt biaya bersama (siapa berutang ke siapa), lalu dialihkan ke representative keluarga
   const debtMap = {};
   costsState.shared.forEach(item => {
@@ -1060,7 +1041,12 @@ function renderSettlement(){
     });
   });
 
-  // Netting pasangan yang saling berutang
+  // Simpan versi kotor (sebelum netting) — dipakai buat breakdown per-PIC
+  // supaya keliatan step-by-step: tagihan kotor, dikurangi utang ke PIC lain, baru net akhir.
+  const repDebtMapGross = {};
+  Object.keys(repDebtMap).forEach(o => { repDebtMapGross[o] = Object.assign({}, repDebtMap[o]); });
+
+  // Netting pasangan yang saling berutang (buat "Cara pelunasan" — transaksi seminim mungkin)
   const involvedIds = new Set();
   Object.keys(repDebtMap).forEach(o => { involvedIds.add(o); Object.keys(repDebtMap[o]).forEach(p => involvedIds.add(p)); });
   const idList = Array.from(involvedIds);
@@ -1103,6 +1089,33 @@ function renderSettlement(){
   });
   transactions.sort((a,b) => a.from.localeCompare(b.from) || b.amount - a.amount);
 
+  // Rincian per PIC: apa yang sudah dikeluarkan, total tagihan kotor dari pembagian rata,
+  // dikurangi bagian yang perlu dibayar ke PIC lain, baru total bersihnya.
+  const picGroups = {};
+  costsState.shared.forEach(item => {
+    if (!item.paidBy) return;
+    const rep = repOf(item.paidBy);
+    if (!picGroups[rep]) picGroups[rep] = { label: labelFor(rep), items: [], totalSpent: 0, receivable: 0, owedTo: [] };
+    const amt = item.splitMode === 'custom' ? Object.values(item.customAmounts||{}).reduce((s,v)=>s+(Number(v)||0),0) : (Number(item.amount)||0);
+    picGroups[rep].items.push({ title: item.title || '(tanpa nama)', category: item.category, amount: amt });
+    picGroups[rep].totalSpent += amt;
+  });
+  Object.keys(repDebtMapGross).forEach(owerId => {
+    Object.keys(repDebtMapGross[owerId]).forEach(picRepId => {
+      const amt = repDebtMapGross[owerId][picRepId];
+      if (amt <= 500) return;
+      if (!picGroups[picRepId]) picGroups[picRepId] = { label: labelFor(picRepId), items: [], totalSpent: 0, receivable: 0, owedTo: [] };
+      picGroups[picRepId].receivable += amt;
+      if (!picGroups[owerId]) picGroups[owerId] = { label: labelFor(owerId), items: [], totalSpent: 0, receivable: 0, owedTo: [] };
+      picGroups[owerId].owedTo.push({ to: labelFor(picRepId), amount: amt });
+    });
+  });
+  const picIds = Object.keys(picGroups).sort((a,b) => {
+    const netA = picGroups[a].receivable - picGroups[a].owedTo.reduce((s,o)=>s+o.amount,0);
+    const netB = picGroups[b].receivable - picGroups[b].owedTo.reduce((s,o)=>s+o.amount,0);
+    return netB - netA;
+  });
+
   // Pinjaman TIDAK dialihkan ke representative — tetap per-orang yang benar-benar pinjam/minjemin.
   const loanTransactions = [];
   loansState.list.forEach(loan => {
@@ -1117,12 +1130,30 @@ function renderSettlement(){
     });
   });
 
-  const balanceRows = balances.length ? balances.map(b =>
-    '<div class="totals-row"><span>' + esc(b.name) + (b.type==='anak' ? ' <span class="badge-child">Anak</span>' : '') + '</span>' +
-    '<span style="color:' + (b.net > 500 ? '#7bd39a' : (b.net < -500 ? '#f4a3a3' : 'var(--text-dim)')) + ';">' +
-      (b.net > 500 ? '+' : '') + rp(b.net) +
-    '</span></div>'
-  ).join('') : '<p class="blurb">Belum ada peserta.</p>';
+  const picCards = picIds.length ? picIds.map(id => {
+    const g = picGroups[id];
+    const owedToTotal = g.owedTo.reduce((s,o) => s + o.amount, 0);
+    const net = g.receivable - owedToTotal;
+    const itemRows = g.items.length ? g.items.map(it =>
+      '<div class="totals-row"><span>' + esc(it.title) + (it.category ? ' <span style="color:var(--text-mute);">· ' + esc(it.category) + '</span>' : '') + '</span><span>' + rp(it.amount) + '</span></div>'
+    ).join('') : '<p class="blurb">Belum ada item.</p>';
+    const owedToRows = g.owedTo.length ? g.owedTo.map(o =>
+      '<div class="totals-row"><span>' + esc(o.to) + '</span><span>' + rp(o.amount) + '</span></div>'
+    ).join('') : '<p class="blurb">Tidak ada.</p>';
+    const netLabel = net >= 0 ? 'Total akan diterima (bersih)' : 'Total perlu dibayar (bersih)';
+    const netColor = net >= 0 ? '#7bd39a' : '#f4a3a3';
+    return '<div class="card">' +
+      '<div class="card-header">' + esc(g.label) + '</div>' +
+      (g.items.length ? '<p class="blurb" style="margin-bottom:6px;">Yang sudah dikeluarkan</p>' + itemRows +
+        '<div class="totals-row strong"><span>Total dikeluarkan</span><span>' + rp(g.totalSpent) + '</span></div>' : '') +
+      '<p class="blurb" style="margin:14px 0 6px;">Total tagihan dari pembagian rata</p>' +
+      '<div class="totals-row strong"><span>Tagihan kotor</span><span>' + rp(g.receivable) + '</span></div>' +
+      '<p class="blurb" style="margin:14px 0 6px;">Dikurangi: perlu dibayar ke</p>' +
+      owedToRows +
+      '<div class="totals-row"><span>Total dikurangi</span><span>-' + rp(owedToTotal) + '</span></div>' +
+      '<div class="totals-row strong" style="color:' + netColor + ';"><span>' + netLabel + '</span><span>' + rp(Math.abs(net)) + '</span></div>' +
+    '</div>';
+  }).join('') : '<p class="blurb">Belum ada biaya bersama yang dibayarkan.</p>';
 
   const txRows = transactions.length ? transactions.map(t =>
     '<div class="totals-row"><span>' + esc(t.from) + ' ⮕ ' + esc(t.to) + '</span><span>' + rp(t.amount) + '</span></div>'
@@ -1133,13 +1164,11 @@ function renderSettlement(){
   ).join('') : '<p class="blurb">Belum ada pinjaman.</p>';
 
   document.getElementById('settlement-card').innerHTML =
-    '<div class="card"><div class="card-header">Saldo per orang</div>' + balanceRows +
-      '<p class="blurb" style="margin-top:10px;">Hijau = sudah bayar lebih dari bagiannya (akan menerima). Merah = belum bayar bagiannya (perlu bayar).</p>' +
-    '</div>' +
+    picCards +
     '<div class="card"><div class="card-header">Cara pelunasan (biaya bersama)</div>' + txRows +
       '<p class="blurb" style="margin-top:10px;">Kalau ada peserta yang "diwakilkan", tagihannya digabung lewat orang yang mewakili — nama itu ditulis dengan yang diwakilinya dalam kurung.</p>' +
     '</div>' +
-    '<div class="card"><div class="card-header">Pelunasan pinjaman</div>' + loanRows +
+    '<div class="card"><div class="card-header">Pelunasan pinjaman (di luar biaya bersama)</div>' + loanRows +
     '</div>';
 }
 
