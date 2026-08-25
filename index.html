@@ -188,8 +188,19 @@
 <body>
 
 <div class="wrap" id="landing-page" style="display:none;">
-  <p class="landing-title">Kegiatan kita</p>
-  <p class="landing-sub">Pilih kegiatan yang mau dilihat, atau buat yang baru.</p>
+  <div class="title-row" id="landing-title-display-row">
+    <p class="landing-title" id="landing-title-display" style="margin:0;">Kegiatan kita</p>
+    <button class="icon-btn" id="edit-landing-title-btn" aria-label="Edit judul landing"></button>
+  </div>
+  <p class="landing-sub" id="landing-sub-display">Pilih kegiatan yang mau dilihat, atau buat yang baru.</p>
+  <div id="landing-title-edit-form" class="title-edit-form" style="display:none; max-width:420px; margin-bottom:1.5rem;">
+    <input type="text" id="landing-title-input" placeholder="Judul halaman" />
+    <input type="text" id="landing-sub-input" placeholder="Sub-judul" />
+    <div class="title-edit-actions">
+      <button class="icon-btn ok-btn" id="landing-title-save-btn" aria-label="Simpan"></button>
+      <button class="icon-btn x-btn" id="landing-title-cancel-btn" aria-label="Batal"></button>
+    </div>
+  </div>
   <div id="project-cards"></div>
   <div class="new-project-card">
     <button class="add-row-btn" id="show-new-project-btn" style="border-style:solid;">+ Buat kegiatan baru</button>
@@ -1025,7 +1036,7 @@ function renderSettlement(){
     net: (paidMap[p.id]||0) - (owedMap[p.id]||0)
   }));
 
-  // Debt mentah per-item/loan (siapa berutang ke siapa), lalu dialihkan ke representative
+  // Debt biaya bersama (siapa berutang ke siapa), lalu dialihkan ke representative keluarga
   const debtMap = {};
   costsState.shared.forEach(item => {
     if (!item.paidBy) return;
@@ -1035,15 +1046,9 @@ function renderSettlement(){
       debtMap[en.personId][item.paidBy] = (debtMap[en.personId][item.paidBy] || 0) + en.amount;
     });
   });
-  loansState.list.forEach(loan => {
-    if (!loan.lenderId || !loan.borrowerId || loan.lenderId === loan.borrowerId) return;
-    const amt = Number(loan.amount)||0;
-    if (amt <= 0) return;
-    debtMap[loan.borrowerId] = debtMap[loan.borrowerId] || {};
-    debtMap[loan.borrowerId][loan.lenderId] = (debtMap[loan.borrowerId][loan.lenderId] || 0) + amt;
-  });
 
-  // Alihkan ke representative (payerId), gabungkan pasangan yang sama
+  // Alihkan ke representative (payerId). repOf cuma 1 langkah & aman dari lingkaran
+  // (kalau ada konfigurasi saling mewakili, representsMap di bawah akan mengabaikannya).
   const repDebtMap = {};
   Object.keys(debtMap).forEach(owerId => {
     const repOwer = repOf(owerId);
@@ -1072,18 +1077,21 @@ function renderSettlement(){
     }
   }
 
-  // Susun label "mewakili ..." per representative
+  // Susun label "Nama (anggota lain)" per representative.
+  // Hanya orang yang BUKAN representative-nya sendiri yang boleh masuk sini,
+  // supaya tidak ada dua orang saling "mewakili" (lingkaran).
   const representsMap = {};
   participantsState.list.forEach(p => {
     const rep = repOf(p.id);
-    if (rep !== p.id){
-      representsMap[rep] = representsMap[rep] || [];
-      representsMap[rep].push(p.name);
-    }
+    if (rep === p.id) return;
+    const repPerson = participantsState.list.find(x => x.id === rep);
+    if (repPerson && repPerson.payerId) return; // rep-nya sendiri didelegasikan lagi -> abaikan supaya tidak muter
+    representsMap[rep] = representsMap[rep] || [];
+    representsMap[rep].push(p.name);
   });
   function labelFor(id){
     const base = nameById[id] || "?";
-    return representsMap[id] ? base + " (mewakili " + representsMap[id].join(', ') + ")" : base;
+    return representsMap[id] ? base + " (" + representsMap[id].join(', ') + ")" : base;
   }
 
   const transactions = [];
@@ -1095,6 +1103,20 @@ function renderSettlement(){
   });
   transactions.sort((a,b) => a.from.localeCompare(b.from) || b.amount - a.amount);
 
+  // Pinjaman TIDAK dialihkan ke representative — tetap per-orang yang benar-benar pinjam/minjemin.
+  const loanTransactions = [];
+  loansState.list.forEach(loan => {
+    if (!loan.lenderId || !loan.borrowerId || loan.lenderId === loan.borrowerId) return;
+    const amt = Number(loan.amount)||0;
+    if (amt <= 0) return;
+    loanTransactions.push({
+      from: nameById[loan.borrowerId] || "?",
+      to: nameById[loan.lenderId] || "?",
+      amount: amt,
+      note: loan.note
+    });
+  });
+
   const balanceRows = balances.length ? balances.map(b =>
     '<div class="totals-row"><span>' + esc(b.name) + (b.type==='anak' ? ' <span class="badge-child">Anak</span>' : '') + '</span>' +
     '<span style="color:' + (b.net > 500 ? '#7bd39a' : (b.net < -500 ? '#f4a3a3' : 'var(--text-dim)')) + ';">' +
@@ -1103,15 +1125,21 @@ function renderSettlement(){
   ).join('') : '<p class="blurb">Belum ada peserta.</p>';
 
   const txRows = transactions.length ? transactions.map(t =>
-    '<div class="totals-row"><span>' + esc(t.from) + ' → ' + esc(t.to) + '</span><span>' + rp(t.amount) + '</span></div>'
+    '<div class="totals-row"><span>' + esc(t.from) + ' ⮕ ' + esc(t.to) + '</span><span>' + rp(t.amount) + '</span></div>'
   ).join('') : '<p class="blurb">Belum ada yang perlu dilunasi.</p>';
+
+  const loanRows = loanTransactions.length ? loanTransactions.map(t =>
+    '<div class="totals-row"><span>' + esc(t.from) + ' ⮕ ' + esc(t.to) + (t.note ? ' <span style="color:var(--text-mute);">(' + esc(t.note) + ')</span>' : '') + '</span><span>' + rp(t.amount) + '</span></div>'
+  ).join('') : '<p class="blurb">Belum ada pinjaman.</p>';
 
   document.getElementById('settlement-card').innerHTML =
     '<div class="card"><div class="card-header">Saldo per orang</div>' + balanceRows +
       '<p class="blurb" style="margin-top:10px;">Hijau = sudah bayar lebih dari bagiannya (akan menerima). Merah = belum bayar bagiannya (perlu bayar).</p>' +
     '</div>' +
-    '<div class="card"><div class="card-header">Cara pelunasan</div>' + txRows +
-      '<p class="blurb" style="margin-top:10px;">Kalau ada peserta yang "diwakilkan", pembayarannya digabung lewat orang yang mewakili (lihat tab Peserta).</p>' +
+    '<div class="card"><div class="card-header">Cara pelunasan (biaya bersama)</div>' + txRows +
+      '<p class="blurb" style="margin-top:10px;">Kalau ada peserta yang "diwakilkan", tagihannya digabung lewat orang yang mewakili — nama itu ditulis dengan yang diwakilinya dalam kurung.</p>' +
+    '</div>' +
+    '<div class="card"><div class="card-header">Pelunasan pinjaman</div>' + loanRows +
     '</div>';
 }
 
@@ -1225,6 +1253,9 @@ const projectsListRef = db.ref('projects-list');
 const BUILTIN_PROJECTS = {
   bromo: { name: 'Trip ke Bromo', tabs: ALL_TAB_KEYS, builtin: true }
 };
+function metaPathFor(id){
+  return id === 'bromo' ? 'bromo-meta' : 'projects/' + id + '/meta';
+}
 
 function renderProjectCards(registryData){
   const root = document.getElementById('project-cards');
@@ -1236,7 +1267,7 @@ function renderProjectCards(registryData){
     return '<div style="display:flex; align-items:center; gap:8px;">' +
       '<a class="project-card" href="?project=' + encodeURIComponent(id) + '" style="flex:1;">' +
         '<div class="pc-body">' +
-          '<p class="pc-name">' + esc(p.name || id) + '</p>' +
+          '<p class="pc-name" data-id="' + esc(id) + '">' + esc(p.name || id) + '</p>' +
           '<div class="pc-tabs">' + tabs.map(t => '<span>' + esc(PROJECT_ICON[t] || t) + '</span>').join('') + '</div>' +
         '</div>' +
         '<span class="pc-arrow">' + iconSvg('arrow',16) + '</span>' +
@@ -1251,6 +1282,17 @@ function renderProjectCards(registryData){
       projectsListRef.child(id).remove();
     }
   }));
+  // Judul kartu diambil live dari judul asli di halaman detail masing-masing,
+  // supaya selalu sinkron walau diedit di sana.
+  ids.forEach(id => {
+    db.ref(metaPathFor(id)).once('value').then(snap => {
+      const m = snap.val();
+      if (m && m.title){
+        const nameEl = root.querySelector('.pc-name[data-id="' + id + '"]');
+        if (nameEl) nameEl.textContent = m.title;
+      }
+    }).catch(() => {});
+  });
 }
 
 document.getElementById('show-new-project-btn').addEventListener('click', () => {
@@ -1271,9 +1313,53 @@ document.getElementById('create-project-btn').addEventListener('click', () => {
   });
 });
 
+// ---------- Judul & sub-judul landing page (bisa diedit) ----------
+const landingMetaRef = db.ref('landing-meta');
+let landingMetaState = { title: 'Kegiatan kita', subtitle: 'Pilih kegiatan yang mau dilihat, atau buat yang baru.' };
+let landingMetaLastRaw = '';
+let landingTitleEditing = false;
+function renderLandingMeta(){
+  document.getElementById('landing-title-display').textContent = landingMetaState.title;
+  document.getElementById('landing-sub-display').textContent = landingMetaState.subtitle;
+}
+document.getElementById('edit-landing-title-btn').innerHTML = iconSvg('pencil', 14);
+document.getElementById('landing-title-save-btn').innerHTML = iconSvg('check', 14);
+document.getElementById('landing-title-cancel-btn').innerHTML = iconSvg('x', 14);
+document.getElementById('edit-landing-title-btn').addEventListener('click', () => {
+  landingTitleEditing = true;
+  document.getElementById('landing-title-input').value = landingMetaState.title;
+  document.getElementById('landing-sub-input').value = landingMetaState.subtitle;
+  document.getElementById('landing-title-display-row').style.display = 'none';
+  document.getElementById('landing-sub-display').style.display = 'none';
+  document.getElementById('landing-title-edit-form').style.display = 'flex';
+});
+function closeLandingTitleEdit(){
+  landingTitleEditing = false;
+  document.getElementById('landing-title-display-row').style.display = '';
+  document.getElementById('landing-sub-display').style.display = '';
+  document.getElementById('landing-title-edit-form').style.display = 'none';
+}
+document.getElementById('landing-title-cancel-btn').addEventListener('click', closeLandingTitleEdit);
+document.getElementById('landing-title-save-btn').addEventListener('click', () => {
+  landingMetaState.title = document.getElementById('landing-title-input').value.trim() || 'Kegiatan kita';
+  landingMetaState.subtitle = document.getElementById('landing-sub-input').value.trim();
+  renderLandingMeta();
+  closeLandingTitleEdit();
+  landingMetaLastRaw = JSON.stringify(landingMetaState);
+  landingMetaRef.set(landingMetaState);
+});
+
 function initLandingPage(){
   projectsListRef.on('value', snap => {
     renderProjectCards(snap.val() || {});
+  });
+  landingMetaRef.on('value', snap => {
+    const data = snap.val();
+    if (!data || !data.title){ landingMetaRef.set(landingMetaState); return; }
+    const raw = JSON.stringify(data);
+    if (raw === landingMetaLastRaw) return;
+    landingMetaLastRaw = raw; landingMetaState = data;
+    if (!landingTitleEditing) renderLandingMeta();
   });
 }
 
